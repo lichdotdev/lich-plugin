@@ -5,7 +5,8 @@
 // recording every fetch as contract.mjs reads a request, so the reports answer
 // to the same fixtures lich asserts (session-state.jsonl). The
 // `session.compact` payloads and the errors `next(e)` rejects with below are
-// what Claude Code 2.1.295 delivered against a stub lich.
+// what Claude Code 2.1.295 delivered against a stub lich; the idle compaction
+// is the one Claude Code 2.1.300 runs before the prompt cache expires.
 //
 // Run: node --test tests/
 
@@ -28,6 +29,7 @@ const COMPACTED = {
   messages: [{ role: 'user', text: 'This session is being continued from a previous conversation that ran out of context.' }],
 }
 
+const TURN = 'e0b6a2c4-1f3d-4e5a-8b7c-9d0e1f2a3b4c'
 const NO_CONTENT = { status: 204, ok: true, headers: {}, text: '' }
 const CONVERSATION = '9f1c7c1e-8f2a-4c3b-9d5e-2a7b6c4d1e05'
 
@@ -44,9 +46,9 @@ const settle = () => new Promise((r) => setTimeout(r, 20))
 
 /**
  * Registers the module against a fake engine. A hook registered with a
- * matcher runs only for an event that matches it, as the engine runs it, and
- * an event no hook matches goes straight to `compact`, Claude Code's own
- * compaction. `answer` answers each report.
+ * matcher runs only for an event that matches it, a RegExp value testing the
+ * field as the engine does, and an event no hook matches goes straight to
+ * `compact`, Claude Code's own compaction. `answer` answers each report.
  */
 function load({ env = lichEnv(PORT), answer = () => Promise.resolve(NO_CONTENT) } = {}) {
   const hooks = []
@@ -69,7 +71,8 @@ function load({ env = lichEnv(PORT), answer = () => Promise.resolve(NO_CONTENT) 
     },
   }
   const fire = (event, e, last) => {
-    const found = hooks.find((h) => h.event === event && Object.entries(h.matcher).every(([key, value]) => e[key] === value))
+    const matches = ([key, value]) => (value instanceof RegExp ? value.test(e[key]) : e[key] === value)
+    const found = hooks.find((h) => h.event === event && Object.entries(h.matcher).every(matches))
     return found ? found.hook($, e, last) : last(e)
   }
   return {
@@ -77,6 +80,8 @@ function load({ env = lichEnv(PORT), answer = () => Promise.resolve(NO_CONTENT) 
     states: () => requests.map((r) => JSON.parse(r.raw).state),
     start: (isInteractive = true) => fire('session.start', { cwd: '/w', surface: 'terminal', isInteractive }, async (e) => e),
     compact: (e, compact = async () => COMPACTED) => fire('session.compact', e, compact),
+    turnStart: (turnId = TURN) => fire('turn.start', { text: '', turnId }, async () => ({ turnId })),
+    turnComplete: (turnId = TURN) => fire('turn.complete', { turnId, reason: 'answer' }, async () => ({ text: 'hi' })),
   }
 }
 
@@ -103,6 +108,33 @@ test('a manual /compact is bracketed by compacting and done, as the contract spe
 test('an automatic compaction hands the card back to the turn', async () => {
   const mod = load()
   await mod.start()
+  await mod.turnStart()
+
+  await mod.compact(AUTO)
+  await until(() => mod.requests.length === 2, 'both reports')
+
+  assert.deepEqual(mod.states(), ['compacting', 'busy'])
+})
+
+// The idle compaction reaches the mod as `auto` too, but with no turn open and
+// no Stop to follow it: closing with busy left the card on the spinner.
+test('an automatic compaction at an idle prompt closes with done', async () => {
+  const mod = load()
+  await mod.start()
+  await mod.turnStart()
+  await mod.turnComplete()
+
+  await mod.compact(AUTO)
+  await until(() => mod.requests.length === 2, 'both reports')
+
+  assert.deepEqual(mod.states(), ['compacting', 'done'])
+})
+
+test('a turn other than the open one ending leaves it open', async () => {
+  const mod = load()
+  await mod.start()
+  await mod.turnStart()
+  await mod.turnComplete('5c1d7e9a-2b3f-4a6c-8d0e-1f2a3b4c5d6e')
 
   await mod.compact(AUTO)
   await until(() => mod.requests.length === 2, 'both reports')
@@ -133,6 +165,7 @@ for (const [e, error, closing] of [
   test(`${e.trigger} compaction that fails still closes with ${closing}, and its error goes on`, async () => {
     const mod = load()
     await mod.start()
+    if (closing === 'busy') await mod.turnStart()
 
     await assert.rejects(
       mod.compact(e, async () => {

@@ -145,11 +145,15 @@ Claude Code 2.1.295:
 |----------|------------------------------------------|---------------------------------------------------------------------------|-------------|
 | `manual` | `/compact`, at an idle prompt            | resolves after the summary (~6s), or rejects on Esc ("Request was aborted") | `done`      |
 | `auto`   | inside a turn, after `UserPromptSubmit`, before the model request | resolves after the summary (~14s), or rejects within ~40ms when the engine gives up ("reactive compaction did not settle ok") and the turn goes on | `busy`      |
+| `auto`   | at an idle prompt, before the prompt cache expires ("Compacted while idle", seen on 2.1.300) | resolves after a summary prepared ahead of time | `done`      |
 
 `compacting` goes out before `next(e)` is called and the closing state once it
-settles, either way; the error, if any, goes on to Claude Code untouched. An
-automatic compaction closes with `busy` because its turn is still running; the
-turn's own `Stop` reports `done`. Esc during an automatic compaction did not
+settles, either way; the error, if any, goes on to Claude Code untouched. The
+closing state is the turn's, not the trigger's: `busy` while a turn is open,
+whose own `Stop` reports `done`, and `done` when none is. The mod follows the
+turn through `turn.start` and `turn.complete`, because the trigger cannot tell:
+the idle compaction prepares its summary under `precompute` and applies it as
+`auto`, with no turn open and no `Stop` to follow. Esc during an automatic compaction did not
 abort it on the measured run: the summary finished and the turn ended normally.
 
 The rest follows the other mods:
