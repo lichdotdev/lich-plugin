@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.3] - 2026-10-15
+
 ### Added
 
 - **The theme skill writes a theme's `syntax` and `pair`.** It ports a palette's
@@ -766,7 +768,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   plugin is safe to install globally. Requests time out after ~1s and errors
   are swallowed — the hook never blocks or fails the turn.
 
-[Unreleased]: https://github.com/omartelo/lich-plugin/compare/v0.20.2...HEAD
+[Unreleased]: https://github.com/omartelo/lich-plugin/compare/v0.20.3...HEAD
+[0.20.3]: https://github.com/omartelo/lich-plugin/compare/v0.20.2...v0.20.3
 [0.20.2]: https://github.com/omartelo/lich-plugin/compare/v0.20.1...v0.20.2
 [0.20.1]: https://github.com/omartelo/lich-plugin/compare/v0.20.0...v0.20.1
 [0.20.0]: https://github.com/omartelo/lich-plugin/compare/v0.19.2...v0.20.0
