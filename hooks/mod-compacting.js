@@ -4,10 +4,11 @@
 //
 // A Claude Code mod, registered by hooks/lich.js. It brackets `session.compact`:
 // `compacting` before the compaction runs, and the state the session goes back
-// to once `next(e)` settles, whether the compaction stood or failed. A manual
-// /compact runs at an idle prompt, so it closes with `done`; an automatic one
-// runs inside a turn, ahead of the model request that follows, so it closes
-// with `busy` and the turn's own Stop reports `done` later.
+// to once `next(e)` settles, whether the compaction stood or failed: `busy`
+// while a turn is open, whose own Stop reports `done` later, and `done` when
+// none is. The trigger cannot tell them apart: Claude Code 2.1.300 applies the
+// compaction it runs at an idle prompt, before the prompt cache expires, as
+// `auto`, the same trigger as one inside a turn.
 //
 // A settings hook could not do this: `PostCompact` never fires for a
 // compaction that fails, and two measured ones do (Claude Code 2.1.295). Esc
@@ -27,7 +28,7 @@ const PLUGIN_VERSION = "0.20.1"
  * @typedef {import('claude-code').SessionCompactResult} Compacted
  * @typedef {{ base: string, token: string, session: string }} Link
  * @typedef {'done' | 'busy'} Closing
- * @typedef {{ link?: Link, sending: Promise<void> }} State
+ * @typedef {{ link?: Link, turnId?: string, sending: Promise<void> }} State
  */
 
 /**
@@ -84,9 +85,8 @@ function queue($, state, link, sessionState) {
  * @param {State} state
  * @param {Compaction} e
  * @param {(e: Compaction) => Promise<Compacted>} next
- * @param {Closing} closing
  */
-async function bracket($, state, e, next, closing) {
+async function bracket($, state, e, next) {
   const link = state.link
   // A subagent compacting its own transcript leaves the session's alone.
   if (!link || e.agentId !== undefined) return next(e)
@@ -94,7 +94,7 @@ async function bracket($, state, e, next, closing) {
   try {
     return await next(e)
   } finally {
-    queue($, state, link, closing)
+    queue($, state, link, state.turnId === undefined ? "done" : "busy")
   }
 }
 
@@ -110,8 +110,20 @@ export function register(on) {
     return next(e)
   })
 
+  // `/^/` matches every turn: Claude Code refuses one plugin's second hook on
+  // an event with no matcher, and mod-control.js already holds those two.
+  on("turn.start", { turnId: /^/ }, ($, e, next) => {
+    state.turnId = e.turnId
+    return next(e)
+  })
+
+  on("turn.complete", { turnId: /^/ }, ($, e, next) => {
+    if (e.turnId === state.turnId) state.turnId = undefined
+    return next(e)
+  })
+
   // Only the two triggers measured. `precompute` runs ahead of time, out of
   // sight, and a plugin's own `$.session.compact` was never observed.
-  on("session.compact", { trigger: "manual" }, ($, e, next) => bracket($, state, e, next, "done"))
-  on("session.compact", { trigger: "auto" }, ($, e, next) => bracket($, state, e, next, "busy"))
+  on("session.compact", { trigger: "manual" }, ($, e, next) => bracket($, state, e, next))
+  on("session.compact", { trigger: "auto" }, ($, e, next) => bracket($, state, e, next))
 }

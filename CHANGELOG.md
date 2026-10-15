@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A Claude Code card no longer shows its session running after it compacts
+  while idle.** Claude Code 2.1.300 compacts an idle conversation before its
+  prompt cache expires, and reports it as an automatic compaction, the kind
+  that runs inside a turn. The compacting mod closed it with `busy`, and the
+  card sat on the spinner until the next prompt. It now closes with the turn's
+  own state: `busy` while a turn is open, `done` when none is.
+
 ## [0.20.1] - 2026-10-10
 
 ### Fixed
