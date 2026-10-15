@@ -30,6 +30,27 @@ const WINDOWS_DEVICES = [
 ]
 // The newest theme file format lich reads; FormatVersion in internal/themes.
 const FORMAT_VERSION = 1
+// The highlighting tags a syntax key may name, @lezer/highlight's vocabulary as
+// godemirror's tags.Parse reads it, and the modifiers that wrap one.
+const TAG_NAMES = new Set([
+  "angleBracket", "annotation", "arithmeticOperator", "atom", "attributeName",
+  "attributeValue", "bitwiseOperator", "blockComment", "bool", "brace", "bracket",
+  "changed", "character", "className", "color", "comment", "compareOperator", "content",
+  "contentSeparator", "controlKeyword", "controlOperator", "definitionKeyword",
+  "definitionOperator", "deleted", "derefOperator", "docComment", "docString",
+  "documentMeta", "emphasis", "escape", "float", "heading", "heading1", "heading2",
+  "heading3", "heading4", "heading5", "heading6", "inserted", "integer", "invalid",
+  "keyword", "labelName", "lineComment", "link", "list", "literal", "logicOperator",
+  "macroName", "meta", "modifier", "moduleKeyword", "monospace", "name", "namespace",
+  "null", "number", "operator", "operatorKeyword", "paren", "processingInstruction",
+  "propertyName", "punctuation", "quote", "regexp", "self", "separator", "squareBracket",
+  "strikethrough", "string", "strong", "tagName", "typeName", "typeOperator", "unit",
+  "updateOperator", "url", "variableName",
+])
+const TAG_MODIFIERS = ["definition", "constant", "function", "standard", "local", "special"]
+const FONT_STYLES = ["bold", "italic", "underline", "strikethrough"]
+// The bundled themes' schemes, which a custom theme may name as its pair.
+const BUNDLED_SCHEMES = { light: "light", dark: "dark" }
 const MANIFEST = "lich-theme.json"
 const MAX_THEMES = 32
 
@@ -57,6 +78,57 @@ function sourceDecodes(source) {
   if (typeof source !== "object" || Array.isArray(source)) return false
   const decodesToString = (value) => value === undefined || value === null || typeof value === "string"
   return decodesToString(source.url) && decodesToString(source.version)
+}
+
+// tagError is tags.Parse's verdict on a syntax key: a tag name, or a modifier
+// wrapping one, as in definition(propertyName).
+function tagError(expr) {
+  const open = expr.indexOf("(")
+  if (open < 0) {
+    if (expr.includes(")")) return `"${expr}" closes a parenthesis it never opened`
+    return TAG_NAMES.has(expr) ? null : `"${expr}" is not a highlighting tag`
+  }
+  const modifier = expr.slice(0, open)
+  if (!TAG_MODIFIERS.includes(modifier))
+    return `"${modifier}" in "${expr}" is not a tag modifier: want one of ${TAG_MODIFIERS.join(", ")}`
+  if (!expr.endsWith(")")) return `"${expr}" must end with the parenthesis its modifier opens`
+  return tagError(expr.slice(open + 1, -1))
+}
+
+function syntaxErrors(syntax) {
+  if (syntax === undefined || syntax === null) return []
+  if (typeof syntax !== "object" || Array.isArray(syntax))
+    return ["syntax must be an object of tag styles"]
+  const errors = []
+  for (const [tag, entry] of Object.entries(syntax)) {
+    const style = typeof entry === "string" ? { color: entry } : entry
+    if (!style || typeof style !== "object" || Array.isArray(style)) {
+      errors.push(`syntax.${tag} must be a color or a style object`)
+      continue
+    }
+    const problem = tagError(tag)
+    if (problem) errors.push(`syntax: ${problem}`)
+    const color = String(style.color ?? "").trim()
+    if (!color) {
+      if (!FONT_STYLES.some((font) => style[font] === true))
+        errors.push(`syntax.${tag} sets no color and no font style`)
+    } else if (!APP_COLOR.test(color) || color.length > 128) {
+      errors.push(`syntax.${tag} is not an accepted color value: ${JSON.stringify(style.color)}`)
+    }
+  }
+  return errors
+}
+
+// pairErrors is what one file can tell about its pair. Whether a sibling it
+// names has the other scheme is checked with the repository's themes.
+function pairErrors(theme) {
+  const pair = theme.pair
+  if (pair === undefined || pair === null || pair === "") return []
+  if (pair === theme.id) return [`theme "${theme.id}" cannot be its own pair`]
+  if (typeof pair !== "string" || !ID.test(pair)) return [`pair: id ${JSON.stringify(pair)} must match ${ID}`]
+  if (BUNDLED_SCHEMES[pair] === theme.scheme)
+    return [`pair "${pair}" is a ${theme.scheme} theme too; a pair has the other scheme`]
+  return []
 }
 
 function themeErrors(theme) {
@@ -87,6 +159,7 @@ function themeErrors(theme) {
   }
   checkColors("app", APP, APP_COLOR, APP)
   checkColors("terminal", TERMINAL, HEX, ["background", "foreground"])
+  errors.push(...syntaxErrors(theme.syntax), ...pairErrors(theme))
   return errors
 }
 
@@ -135,6 +208,7 @@ function checkRepository(dir) {
   if (files.length > MAX_THEMES) errors.push(`more than ${MAX_THEMES} themes in one repository`)
 
   const seen = new Map()
+  const schemes = new Map()
   for (const name of files) {
     const path = join(dir, name)
     errors.push(...checkTheme(path))
@@ -143,6 +217,13 @@ function checkRepository(dir) {
     if (!id) continue
     if (seen.has(id)) errors.push(`${name}: id "${id}" is already used by ${seen.get(id)}`)
     else seen.set(id, name)
+    schemes.set(id, value.scheme)
+  }
+  // lich lists a theme whose pair has its own scheme as one that can't load.
+  for (const name of files) {
+    const { value } = read(join(dir, name))
+    if (value?.pair && value.pair !== value.id && schemes.get(value.pair) === value.scheme)
+      errors.push(`${name}: pair "${value.pair}" is a ${value.scheme} theme too; a pair has the other scheme`)
   }
   return errors
 }

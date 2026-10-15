@@ -16,6 +16,14 @@ different engines:
 They are picked independently in Settings › Appearance: the terminal picker has
 a `Match app theme` default, so one theme can dress both.
 
+Two optional keys go further, read by the native window (`lich native`) only:
+
+- **`syntax`** — colors the code in its review, diff and file views, by
+  CodeMirror highlighting tag. See [Syntax highlighting](#syntax-highlighting).
+- **`pair`** — the id of the theme's variant for the other scheme, which the
+  window draws while the OS asks for that scheme and Auto light/dark is on. See
+  [Pairs](#pairs).
+
 `template.json`, next to this file, is the same starter lich itself hands out
 (Settings › Appearance › **Save template**). It names every supported color —
 start from it, don't type the shape from memory.
@@ -60,15 +68,18 @@ Same work either way:
 2. Fill `app` by **role**, not by hue — see the token table below.
 3. Fill `terminal`. `background`/`foreground` are required; give the 16 ANSI
    colors too unless you want xterm's built-in palette fighting your background.
-4. Validate: `node validate.mjs <file-or-directory>` (in this skill's directory).
+4. Fill `syntax` from the source palette's own code colors, and set `pair` when
+   the palette has a light and a dark variant. Both are optional; drop the
+   template's `pair` when there is no other variant.
+5. Validate: `node validate.mjs <file-or-directory>` (in this skill's directory).
    It checks the same rules the backend checks, so a pass means the install will
    not bounce.
 
 ## Handing over a single file
 
-5. Write it where the user can point a file picker at it — the session's working
+6. Write it where the user can point a file picker at it — the session's working
    directory, as `<id>.json` — and tell them the absolute path.
-6. Hand the install to them: **Settings › Appearance › Import › Choose file**,
+7. Hand the install to them: **Settings › Appearance › Import › Choose file**,
    then pick that file. lich validates it, stores it under the name it wants,
    applies it and selects it on the spot — no window reload. The file from step 5
    is only the hand-off copy; say it can be deleted once the theme is in.
@@ -85,7 +96,7 @@ my-lich-themes/
 └── gruvbox.json
 ```
 
-5. Scaffold it in the user's working directory (or the repository they name):
+6. Scaffold it in the user's working directory (or the repository they name):
 
    ```bash
    mkdir -p my-lich-themes && cd my-lich-themes
@@ -98,11 +109,11 @@ my-lich-themes/
    EOF
    ```
 
-6. Write each theme beside the manifest. File names are yours — lich stores each
+7. Write each theme beside the manifest. File names are yours — lich stores each
    one as `<id>.json` in its own directory — so name them after the theme.
-7. `node validate.mjs my-lich-themes/` checks the manifest and every theme at
+8. `node validate.mjs my-lich-themes/` checks the manifest and every theme at
    once, the same way an install reads them. Commit only once it passes.
-8. Hand the install to them: **Settings › Appearance › Import**, paste the
+9. Hand the install to them: **Settings › Appearance › Import**, paste the
    **absolute path** of the directory, **Install**. An absolute path is an
    accepted remote, so this works before the repository is pushed anywhere. Once
    it is on a host, the clone URL is what everyone else pastes.
@@ -145,6 +156,17 @@ manifest**, commit, push. The user takes it with **Update** on the theme's row.
     `var()`, `color-mix()`, `url()`, `attr()`, `image-set()` are rejected —
     a theme may not name a resource or defer a value.
   - `terminal` accepts **hex only**. See the traps.
+- `syntax`: optional, an object. Each key is a highlighting tag
+  (`keyword`, `comment`, `variableName`…) or a modifier wrapping one
+  (`definition`, `constant`, `function`, `standard`, `local`, `special`, as in
+  `function(variableName)`); an unknown tag or modifier is an error. Each value
+  is a color, accepted as an `app` color is, or an object with `color` and any
+  of `bold`, `italic`, `underline`, `strikethrough` set to `true`. An object
+  with neither a color nor a font style is an error.
+- `pair`: optional, a theme id, not the theme's own. lich lists a theme whose
+  pair is installed with **the same** scheme as a theme that can't load,
+  bundled `light` and `dark` included. A pair nobody installed is fine: the
+  theme loads, with nothing to follow to.
 - The file is read only if it is a regular file ≤ 1 MB.
 
 ## Traps
@@ -183,6 +205,58 @@ manifest**, commit, push. The user takes it with **Update** on the theme's row.
   are hardcoded, so check they still read on your `background`, `card` and
   terminal background.
 - Reimporting an id that already exists asks before replacing it.
+
+## Syntax highlighting
+
+`syntax` styles code by [CodeMirror highlighting tag](https://lezer.codemirror.net/docs/ref/#highlight.tags),
+and resolves the way CodeMirror's `HighlightStyle` does: code takes the style of
+the most specific tag that has one, so `lineComment` falls back to `comment` and
+`definition(propertyName)` to `propertyName`; code no style reaches is drawn in
+`app.foreground`. Style the broad tags first (`keyword`, `string`, `comment`,
+`number`, `typeName`, `variableName`, `propertyName`, `function(variableName)`,
+`operator`, `punctuation`), then the specific ones a port wants apart.
+
+```json
+"syntax": {
+  "keyword": "#c4a7e7",
+  "string": "#f6c177",
+  "comment": { "color": "#6e6a86", "italic": true },
+  "function(variableName)": "#ebbcba",
+  "constant(variableName)": { "color": "#83c092", "bold": true },
+  "annotation": "#e39b7b",
+  "heading": { "bold": true }
+}
+```
+
+Port it from the source's own editor theme, not by guessing from the ANSI
+colors: a JetBrains color scheme XML or a VS Code theme's `tokenColors` names
+what each kind of token gets. lich tags Java's enum constants
+`constant(variableName)`, its annotations `annotation`, its field declarations
+`definition(propertyName)` and its import paths `namespace`, which is what an
+IDE's constant, metadata, field and package colors map to.
+
+A lich that predates `syntax` ignores the key, so a pack adds it without a
+`minLichVersion`.
+
+## Pairs
+
+A palette with a light and a dark variant pairs them, so the native window can
+follow the desktop: with Auto light/dark on, it draws the pair while the OS asks
+for the pair's scheme, and goes back when it stops. The theme the user chose
+stays the one in use.
+
+```json
+{ "id": "forest-night", "scheme": "dark",  "pair": "forest-day",   ... }
+{ "id": "forest-day",   "scheme": "light", "pair": "forest-night", ... }
+```
+
+A pair need not point back. Three dark variants and one light one pair each
+dark with the light, and the light with the variant most people pick: a user on
+any dark variant comes back to it, since only the chosen theme is ever followed
+from. A single-variant palette leaves `pair` out.
+
+A lich that predates `pair` ignores the key, so a pack adds it without a
+`minLichVersion`.
 
 ## App tokens by role
 
@@ -230,6 +304,9 @@ Claude Code's own meta lines vanish.
 - [ ] `border` reads as a hairline, not a rule
 - [ ] `emerald-500` / `amber-500` / `destructive` still read on your surfaces
 - [ ] Terminal `background` sits well beside app `background` (they touch)
+- [ ] `syntax` ported from the source's editor theme, the broad tags styled
+- [ ] `pair` set on every variant of a light-and-dark palette, and on no
+      single-variant one
 - [ ] Repository: `version` bumped in the same commit as a theme change
 - [ ] Handed over as a path plus the Settings › Appearance › Import step —
       never written into the themes directory

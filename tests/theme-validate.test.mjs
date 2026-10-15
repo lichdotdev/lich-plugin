@@ -88,3 +88,73 @@ test('a directory named like a theme is no theme, so a pack of only that has non
   assert.equal(result.status, 1)
   assert.match(result.stderr, /no theme JSON next to lich-theme\.json/)
 })
+
+// syntax and pair, as lich's internal/themes validateSyntax and checkPairs
+// read them.
+
+test('the template\'s syntax section passes, bare colors and style objects alike', () => {
+  const result = validateTheme({})
+  assert.equal(result.status, 0, result.stderr)
+})
+
+test('a syntax key that is no highlighting tag is rejected', () => {
+  const result = validateTheme({ syntax: { keywrd: '#ff0000' } })
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /syntax: "keywrd" is not a highlighting tag/)
+})
+
+test('a modifier wraps a tag, and an unknown modifier is rejected', () => {
+  assert.equal(validateTheme({ syntax: { 'definition(propertyName)': '#7fbbb3' } }).status, 0)
+  const result = validateTheme({ syntax: { 'bold(keyword)': '#ff0000' } })
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /"bold" in "bold\(keyword\)" is not a tag modifier/)
+})
+
+test('a syntax style needs a color or a font style, and an accepted color', () => {
+  let result = validateTheme({ syntax: { keyword: {} } })
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /syntax\.keyword sets no color and no font style/)
+  result = validateTheme({ syntax: { keyword: 'var(--x)' } })
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /syntax\.keyword is not an accepted color value/)
+  assert.equal(validateTheme({ syntax: { emphasis: { italic: true } } }).status, 0)
+})
+
+test('a theme cannot be its own pair, nor pair with a bundled theme of its scheme', () => {
+  let result = validateTheme({ id: 'night', pair: 'night' })
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /cannot be its own pair/)
+  result = validateTheme({ id: 'night', pair: 'dark' })
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /pair "dark" is a dark theme too/)
+  assert.equal(validateTheme({ id: 'night', pair: 'light' }).status, 0)
+})
+
+function pack(themes) {
+  const dir = mkdtempSync(join(tmpdir(), 'lich-pack-'))
+  writeFileSync(join(dir, 'lich-theme.json'), JSON.stringify({ name: 'Pack', version: '1.0.0' }))
+  for (const theme of themes) writeFileSync(join(dir, `${theme.id}.json`), JSON.stringify({ ...template, ...theme }))
+  return dir
+}
+
+test('a pack\'s pairs pass when they cross schemes', () => {
+  const result = validatePath(pack([
+    { id: 'forest-night', scheme: 'dark', pair: 'forest-day' },
+    { id: 'forest-day', scheme: 'light', pair: 'forest-night' },
+  ]))
+  assert.equal(result.status, 0, result.stderr)
+})
+
+test('a pair of the same scheme fails the pack, as lich lists that theme as broken', () => {
+  const result = validatePath(pack([
+    { id: 'forest-night', scheme: 'dark', pair: 'forest-dusk' },
+    { id: 'forest-dusk', scheme: 'dark' },
+  ]))
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /forest-night\.json: pair "forest-dusk" is a dark theme too/)
+})
+
+test('a pair no theme answers to passes: the pack may be partly removed', () => {
+  const result = validatePath(pack([{ id: 'forest-night', scheme: 'dark', pair: 'forest-day' }]))
+  assert.equal(result.status, 0, result.stderr)
+})

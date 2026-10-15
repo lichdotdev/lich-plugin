@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The theme skill writes a theme's `syntax` and `pair`.** It ports a palette's
+  code colors into the optional `syntax` section, which colors the code in
+  `lich native`'s review, diff and file views, and pairs the light and dark
+  variants of a palette so the native window follows the desktop between them.
+  `validate.mjs` checks both the way lich does: an unknown highlighting tag or
+  modifier, a style with no color and no font style, a theme that is its own
+  pair, or a pair of its own scheme.
+
 ## [0.20.2] - 2026-10-15
 
 ### Fixed
