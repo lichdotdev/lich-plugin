@@ -115,13 +115,16 @@ export default function lichPlugin(pi) {
   // The session id lich resumes from. It is on the manager rather than in the
   // environment: omp exports nothing about the running session to its own
   // process env, so `ctx` is the only source.
-  pi.on(
-    "session_start",
-    safely((_event, ctx) => {
-      const id = sessionIdOf(ctx)
-      if (id !== undefined) report("session-start", { provider_session_id: id, provider: "omp" })
-    }),
-  )
+  const reportStart = safely((_event, ctx) => {
+    const id = sessionIdOf(ctx)
+    if (id !== undefined) report("session-start", { provider_session_id: id, provider: "omp" })
+  })
+  pi.on("session_start", reportStart)
+  // A `/resume` moves the session onto another conversation with no second
+  // `session_start`: omp emits `session_switch` instead, its manager already
+  // on the new id (measured on 18.8.9). Reported like a start, so lich holds
+  // the conversation the card runs now.
+  pi.on("session_switch", reportStart)
 
   // The user has sent something: the turn starts here in an interactive
   // session, which is the only kind lich spawns.

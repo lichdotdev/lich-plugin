@@ -74,7 +74,7 @@ swallows its own errors and never awaits a report.
 
 | Report              | Claude Code                  | Codex                        | Antigravity                  | opencode                  | omp                      | Crush                       |
 |---------------------|------------------------------|------------------------------|------------------------------|---------------------------|--------------------------|-----------------------------|
-| session id          | `SessionStart`               | `SessionStart`               | `PreInvocation`              | `session.created`         | `session_start`          | `PreToolUse`                |
+| session id          | `SessionStart`               | `SessionStart`               | `PreInvocation`              | `session.created`         | `session_start`, `session_switch` | `PreToolUse`       |
 | `busy`              | `UserPromptSubmit`, `PostToolUse` | `UserPromptSubmit`, `PostToolUse` | `PreInvocation`        | `session.status` (`busy`) | `input`, `turn_start` | —              |
 | `busy` + tool       | `PreToolUse`                 | `PreToolUse`                 | `PreToolUse`                 | `tool.execute.before`     | `tool_call`              | —                           |
 | `waiting` + reason  | `Notification`               | `PermissionRequest`          | — (not measured)             | any `*.asked`             | — (see below)            | —                           |
