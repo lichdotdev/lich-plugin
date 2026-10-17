@@ -20,7 +20,7 @@
 // refuses a module that hands `$` to a nested function.
 
 // Sent as X-Lich-Plugin on every request; bumped at release (CLAUDE.md, Release).
-const PLUGIN_VERSION = "0.20.4"
+const PLUGIN_VERSION = "0.20.5"
 
 /**
  * @typedef {import('claude-code').EngineInterface} Engine
