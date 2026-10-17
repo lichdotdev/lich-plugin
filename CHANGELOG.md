@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **An omp session that resumes another conversation tells lich which.** A
+  `/resume` inside omp left lich holding the conversation the card opened
+  with, so a restart resumed the old one and lich could not warn when the
+  conversation was already open in another card. The switch is now reported
+  as it happens.
+
 ## [0.20.4] - 2026-10-16
 
 ### Fixed
