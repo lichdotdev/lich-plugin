@@ -10,7 +10,7 @@ the *provider* session id — the field is provider-agnostic.
 
 | script                             | action                          | Claude Code hook | Codex hook     | Antigravity hook | opencode event    | omp event       | Crush hook   |
 |------------------------------------|---------------------------------|------------------|----------------|------------------|-------------------|-----------------|--------------|
-| `report-session-start.sh <provider>` | send the CLI's `session_id`   | `SessionStart`   | `SessionStart` | `PreInvocation`  | `session.created` | `session_start` | `PreToolUse` |
+| `report-session-start.sh <provider>` | send the CLI's `session_id`   | `SessionStart`   | `SessionStart` | `PreInvocation`  | `session.created` | `session_start`, `session_switch` | `PreToolUse` |
 
 `POST /session-start` with `{"session_id": $LICH_SESSION_ID,
 "provider_session_id": <session_id/conversationId from the hook payload on stdin>, "provider":
@@ -41,7 +41,10 @@ The module harnesses report from the earliest place each offers. opencode raises
 `session.created` before the first turn, as early as `SessionStart`; omp's
 `session_start` fires at the same point, and the id itself is read off
 `ctx.sessionManager.getSessionId()` rather than off the event, which carries
-nothing but its type. **Crush only has `PreToolUse`**, so its id rides the first
+nothing but its type. A `/resume` inside omp switches conversations with no
+second `session_start`: omp emits `session_switch` (reason `resume`, measured on
+18.8.9), by which point the manager already answers with the new id, so that
+event reports too. **Crush only has `PreToolUse`**, so its id rides the first
 tool call and a conversation that answers without a tool never sends one — late,
 not wrong.
 

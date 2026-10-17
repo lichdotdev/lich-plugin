@@ -130,6 +130,23 @@ test('session_start with no id yet reports nothing', async () => {
   assert.equal(requests.length, 0, `posted an empty provider session id: ${requests[0]?.raw}`)
 })
 
+// A `/resume` inside omp moves the session onto another conversation without
+// a second `session_start`: omp 18.8.9 emits `session_before_switch` and then
+// `session_switch` (reason "resume"), measured with a logger extension, and
+// by the second one the manager already answers with the new id. lich keeps
+// the id of the conversation running in the card, and warns when another card
+// runs it too, so the switch is reported like a start.
+test('session_switch reports the conversation switched to', async () => {
+  const switched = '0000000b-0000-7000-9000-00000000000b'
+  const requests = await reportsFor(({ emit }) =>
+    emit('session_switch', { type: 'session_switch', reason: 'resume' }, ctxWith({ id: switched })),
+  )
+  assert.equal(requests.length, 1)
+  const { body } = assertSessionStart(requests[0])
+  assert.equal(body.provider, 'omp')
+  assert.equal(body.provider_session_id, switched)
+})
+
 test('input reports busy', async () => {
   const requests = await reportsFor(({ emit }) =>
     emit('input', { type: 'input', text: 'ship it', source: 'interactive' }, ctxWith()),
