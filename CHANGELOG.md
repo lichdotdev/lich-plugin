@@ -773,7 +773,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   card after it while the label is still automatic. Extraction failures are
   swallowed. Requires `jq` (absent → no-op). Contract: `docs/session-title.md`.
 - Marketplace manifest (`.claude-plugin/marketplace.json`), so the repository
-  installs directly via `claude plugin marketplace add omartelo/lich-plugin` +
+  installs directly via `claude plugin marketplace add lichdotdev/lich-plugin` +
   `claude plugin install lich@lich-plugin`. README documents marketplace and
   manual (clone-based) installation.
 
@@ -795,44 +795,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   plugin is safe to install globally. Requests time out after ~1s and errors
   are swallowed — the hook never blocks or fails the turn.
 
-[Unreleased]: https://github.com/omartelo/lich-plugin/compare/v0.20.5...HEAD
-[0.20.5]: https://github.com/omartelo/lich-plugin/compare/v0.20.4...v0.20.5
-[0.20.4]: https://github.com/omartelo/lich-plugin/compare/v0.20.3...v0.20.4
-[0.20.3]: https://github.com/omartelo/lich-plugin/compare/v0.20.2...v0.20.3
-[0.20.2]: https://github.com/omartelo/lich-plugin/compare/v0.20.1...v0.20.2
-[0.20.1]: https://github.com/omartelo/lich-plugin/compare/v0.20.0...v0.20.1
-[0.20.0]: https://github.com/omartelo/lich-plugin/compare/v0.19.2...v0.20.0
-[0.19.2]: https://github.com/omartelo/lich-plugin/compare/v0.19.1...v0.19.2
-[0.19.1]: https://github.com/omartelo/lich-plugin/compare/v0.19.0...v0.19.1
-[0.19.0]: https://github.com/omartelo/lich-plugin/compare/v0.18.4...v0.19.0
-[0.18.4]: https://github.com/omartelo/lich-plugin/compare/v0.18.3...v0.18.4
-[0.18.3]: https://github.com/omartelo/lich-plugin/compare/v0.18.2...v0.18.3
-[0.18.2]: https://github.com/omartelo/lich-plugin/compare/v0.18.1...v0.18.2
-[0.18.1]: https://github.com/omartelo/lich-plugin/compare/v0.18.0...v0.18.1
-[0.18.0]: https://github.com/omartelo/lich-plugin/compare/v0.17.0...v0.18.0
-[0.17.0]: https://github.com/omartelo/lich-plugin/compare/v0.16.0...v0.17.0
-[0.16.0]: https://github.com/omartelo/lich-plugin/compare/v0.15.1...v0.16.0
-[0.15.1]: https://github.com/omartelo/lich-plugin/compare/v0.15.0...v0.15.1
-[0.15.0]: https://github.com/omartelo/lich-plugin/compare/v0.14.0...v0.15.0
-[0.14.0]: https://github.com/omartelo/lich-plugin/compare/v0.13.2...v0.14.0
-[0.13.2]: https://github.com/omartelo/lich-plugin/compare/v0.13.1...v0.13.2
-[0.13.1]: https://github.com/omartelo/lich-plugin/compare/v0.13.0...v0.13.1
-[0.13.0]: https://github.com/omartelo/lich-plugin/compare/v0.12.0...v0.13.0
-[0.12.0]: https://github.com/omartelo/lich-plugin/compare/v0.11.1...v0.12.0
-[0.11.1]: https://github.com/omartelo/lich-plugin/compare/v0.11.0...v0.11.1
-[0.11.0]: https://github.com/omartelo/lich-plugin/compare/v0.10.0...v0.11.0
-[0.10.0]: https://github.com/omartelo/lich-plugin/compare/v0.9.2...v0.10.0
-[0.9.2]: https://github.com/omartelo/lich-plugin/compare/v0.9.1...v0.9.2
-[0.9.1]: https://github.com/omartelo/lich-plugin/compare/v0.9.0...v0.9.1
-[0.9.0]: https://github.com/omartelo/lich-plugin/compare/v0.8.0...v0.9.0
-[0.8.0]: https://github.com/omartelo/lich-plugin/compare/v0.7.0...v0.8.0
-[0.7.0]: https://github.com/omartelo/lich-plugin/compare/v0.6.0...v0.7.0
-[0.6.0]: https://github.com/omartelo/lich-plugin/compare/v0.5.0...v0.6.0
-[0.5.0]: https://github.com/omartelo/lich-plugin/compare/v0.4.1...v0.5.0
-[0.4.1]: https://github.com/omartelo/lich-plugin/compare/v0.4.0...v0.4.1
-[0.4.0]: https://github.com/omartelo/lich-plugin/compare/v0.3.1...v0.4.0
-[0.3.1]: https://github.com/omartelo/lich-plugin/compare/v0.3.0...v0.3.1
-[0.3.0]: https://github.com/omartelo/lich-plugin/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/omartelo/lich-plugin/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/omartelo/lich-plugin/compare/v0.0.1...v0.1.0
-[0.0.1]: https://github.com/omartelo/lich-plugin/releases/tag/v0.0.1
+[Unreleased]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.5...HEAD
+[0.20.5]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.4...v0.20.5
+[0.20.4]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.3...v0.20.4
+[0.20.3]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.2...v0.20.3
+[0.20.2]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.1...v0.20.2
+[0.20.1]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.0...v0.20.1
+[0.20.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.19.2...v0.20.0
+[0.19.2]: https://github.com/lichdotdev/lich-plugin/compare/v0.19.1...v0.19.2
+[0.19.1]: https://github.com/lichdotdev/lich-plugin/compare/v0.19.0...v0.19.1
+[0.19.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.18.4...v0.19.0
+[0.18.4]: https://github.com/lichdotdev/lich-plugin/compare/v0.18.3...v0.18.4
+[0.18.3]: https://github.com/lichdotdev/lich-plugin/compare/v0.18.2...v0.18.3
+[0.18.2]: https://github.com/lichdotdev/lich-plugin/compare/v0.18.1...v0.18.2
+[0.18.1]: https://github.com/lichdotdev/lich-plugin/compare/v0.18.0...v0.18.1
+[0.18.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.17.0...v0.18.0
+[0.17.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.16.0...v0.17.0
+[0.16.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.15.1...v0.16.0
+[0.15.1]: https://github.com/lichdotdev/lich-plugin/compare/v0.15.0...v0.15.1
+[0.15.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.14.0...v0.15.0
+[0.14.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.13.2...v0.14.0
+[0.13.2]: https://github.com/lichdotdev/lich-plugin/compare/v0.13.1...v0.13.2
+[0.13.1]: https://github.com/lichdotdev/lich-plugin/compare/v0.13.0...v0.13.1
+[0.13.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.12.0...v0.13.0
+[0.12.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.11.1...v0.12.0
+[0.11.1]: https://github.com/lichdotdev/lich-plugin/compare/v0.11.0...v0.11.1
+[0.11.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.10.0...v0.11.0
+[0.10.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.9.2...v0.10.0
+[0.9.2]: https://github.com/lichdotdev/lich-plugin/compare/v0.9.1...v0.9.2
+[0.9.1]: https://github.com/lichdotdev/lich-plugin/compare/v0.9.0...v0.9.1
+[0.9.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.8.0...v0.9.0
+[0.8.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.7.0...v0.8.0
+[0.7.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.4.1...v0.5.0
+[0.4.1]: https://github.com/lichdotdev/lich-plugin/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.3.1...v0.4.0
+[0.3.1]: https://github.com/lichdotdev/lich-plugin/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.0.1...v0.1.0
+[0.0.1]: https://github.com/lichdotdev/lich-plugin/releases/tag/v0.0.1

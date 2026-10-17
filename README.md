@@ -88,16 +88,16 @@ One set of hook scripts serves Claude Code, Codex, Antigravity and Crush — the
 Add this repository as a marketplace and install the plugin:
 
 ```bash
-claude plugin marketplace add omartelo/lich-plugin
+claude plugin marketplace add lichdotdev/lich-plugin
 claude plugin install lich@lich-plugin
 ```
 
-The same works inside a session with `/plugin marketplace add omartelo/lich-plugin` followed by `/plugin install lich@lich-plugin`.
+The same works inside a session with `/plugin marketplace add lichdotdev/lich-plugin` followed by `/plugin install lich@lich-plugin`.
 
 ### Codex
 
 ```bash
-codex plugin marketplace add omartelo/lich-plugin
+codex plugin marketplace add lichdotdev/lich-plugin
 codex plugin add lich@lich-plugin
 ```
 
@@ -123,7 +123,7 @@ opencode has no marketplace: a plugin is a file in its plugin directory, so drop
 ```bash
 mkdir -p ~/.config/opencode/plugin
 curl -fsSL -o ~/.config/opencode/plugin/lich.js \
-  https://raw.githubusercontent.com/omartelo/lich-plugin/main/opencode/lich.js
+  https://raw.githubusercontent.com/lichdotdev/lich-plugin/main/opencode/lich.js
 ```
 
 Per project instead of globally, use `.opencode/plugin/lich.js`. Updating means fetching the file again.
@@ -135,7 +135,7 @@ omp has no marketplace of its own either, and its `--hook` and `--extension` fla
 ```bash
 mkdir -p ~/.omp/agent/extensions
 curl -fsSL -o ~/.omp/agent/extensions/lich.js \
-  https://raw.githubusercontent.com/omartelo/lich-plugin/main/omp/lich.js
+  https://raw.githubusercontent.com/lichdotdev/lich-plugin/main/omp/lich.js
 ```
 
 To keep it somewhere else, name the path instead — `omp config set extensions '["/path/to/lich.js"]'`, which writes `extensions:` in `~/.omp/agent/config.yml` — or pass `--hook /path/to/lich.js` for a single run. Per project, `.omp/extensions/lich.js` works the same way. Updating means fetching the file again.
@@ -160,7 +160,7 @@ Crush has no plugin system either: its hooks live in your own `crush.json`. Clon
 ### Manual (from a clone)
 
 ```bash
-git clone https://github.com/omartelo/lich-plugin.git
+git clone https://github.com/lichdotdev/lich-plugin.git
 ```
 
 Then either load it for a single Claude Code session:
