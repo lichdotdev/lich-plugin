@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.6] - 2026-10-17
+
+### Changed
+
+- **The plugin lives at `lichdotdev/lich-plugin`, and lich at `lichdotdev/lich`.**
+  The Codex manifest's `homepage` and `repository`, the install commands in the
+  README and the contract links in the docs and the mods name the new
+  repositories. GitHub redirects the old paths, so an existing install keeps
+  working.
+
 ## [0.20.5] - 2026-10-17
 
 ### Added
@@ -795,7 +805,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   plugin is safe to install globally. Requests time out after ~1s and errors
   are swallowed — the hook never blocks or fails the turn.
 
-[Unreleased]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.5...HEAD
+[Unreleased]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.6...HEAD
+[0.20.6]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.5...v0.20.6
 [0.20.5]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.4...v0.20.5
 [0.20.4]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.3...v0.20.4
 [0.20.3]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.2...v0.20.3
