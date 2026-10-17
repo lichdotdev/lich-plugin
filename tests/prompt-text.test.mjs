@@ -8,7 +8,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { en, ptBR, zhCN, es, say, promptLang } from '../hooks/prompt-text.js'
+import { en, ptBR, zhCN, es, ja, ko, ru, say, promptLang } from '../hooks/prompt-text.js'
 import { register as registerAgentCards } from '../hooks/agent-cards.js'
 import { register as registerEditGuard } from '../hooks/edit-guard.js'
 import { register as registerSelfCommand } from '../hooks/self-command.js'
@@ -226,9 +226,9 @@ test('mod-control: the side question is prefaced in pt-BR', async () => {
   assert.ok(forks[0].prompt.endsWith('Pergunta: o que faz?'))
 })
 
-// ------------------------------------------------------- zh-CN and es catalogs --
+// ---------------------------------------------- zh-CN, es, ja, ko and ru catalogs --
 
-const NEW_LOCALES = { 'zh-CN': zhCN, es }
+const NEW_LOCALES = { 'zh-CN': zhCN, es, ja, ko, ru }
 
 for (const [tag, catalog] of Object.entries(NEW_LOCALES)) {
   test(`${tag}: same keys, same slots and the literal names as English`, () => {
@@ -273,6 +273,42 @@ const EXPECTED = {
     queued: '/compact está en cola y se ejecuta cuando termine este turno. Termina el turno ahora.',
     saved: /^\/model ejecutado desde dentro de la sesión/,
     ask: /^Esta es una pregunta lateral hecha desde fuera de tu turno/,
+  },
+  ja: {
+    background: /^エージェントは lich セッション "w" として動いています（同じこのチェックアウト \/wt\/w で/,
+    done: /^feito\n\n作業は同じこのチェックアウト \/wt\/w にあります（lich セッション "w"）。/,
+    deny: 'タスクは "w" に届きませんでした（unread）：そのカードを開いてください。',
+    stop: 'lich は "w" を停止できませんでした：boom',
+    edit: /^\/r\/a\.js は lich セッション lich-a によっても 2026-10-05T12:00:00\.000Z（3 分前）に編集されています/,
+    skill: /^base\n\nこのセッションでは、ユーザーが実行を求めたときに、組み込みのスラッシュコマンド/,
+    control: /session に "lich-1" を渡してください。/,
+    queued: '/compact はキューに入り、このターンが終わると実行されます。今すぐターンを終えてください。',
+    saved: /^\/model をセッションの中から実行すると/,
+    ask: /^これは、あなたが作業している間にターンの外から尋ねられた横からの質問です/,
+  },
+  ko: {
+    background: /^에이전트는 lich 세션 "w"에서 실행됩니다\(같은 체크아웃 \/wt\/w, 당신처럼 그 파일을 수정함\)\./,
+    done: /^feito\n\n작업은 같은 체크아웃 \/wt\/w에 있습니다\(lich 세션 "w"\)\./,
+    deny: '작업이 "w"에 한 번도 전달되지 않았습니다(unread): 그 카드를 열어 보세요.',
+    stop: 'lich가 "w"을(를) 멈추지 못했습니다: boom',
+    edit: /^\/r\/a\.js은\(는\) lich 세션 lich-a도 2026-10-05T12:00:00\.000Z\(3분 전\)에 수정했습니다/,
+    skill: /^base\n\n이 세션에서는 사용자가 실행을 요청하면 내장 슬래시 명령/,
+    control: /session에 "lich-1"를 전달하세요\./,
+    queued: '/compact이(가) 대기열에 들어갔고 이 턴이 끝나면 실행됩니다. 지금 턴을 끝내세요.',
+    saved: /^세션 안에서 \/model을\(를\) 실행하면/,
+    ask: /^이것은 당신이 작업하는 동안 턴 밖에서 들어온 곁가지 질문입니다/,
+  },
+  ru: {
+    background: /^Агент работает как сессия lich "w", в этой же рабочей копии, \/wt\/w/,
+    done: /^feito\n\nРабота находится в этой же рабочей копии, \/wt\/w \(сессия lich "w"\)\./,
+    deny: 'задача так и не дошла до "w" (unread): откройте её карточку.',
+    stop: 'lich не смог остановить "w": boom',
+    edit: /^\/r\/a\.js также редактировала сессия lich lich-a в 2026-10-05T12:00:00\.000Z \(3 мин назад\)/,
+    skill: /^base\n\nВ этой сессии здесь также можно назвать встроенную slash-команду/,
+    control: /передайте session "lich-1"\./,
+    queued: '/compact поставлена в очередь и выполнится, когда этот ход закончится. Завершите ход сейчас.',
+    saved: /^\/model, запущенная изнутри сессии/,
+    ask: /^Это побочный вопрос, заданный вне вашего хода/,
   },
 }
 
@@ -332,7 +368,7 @@ for (const [tag, want] of Object.entries(EXPECTED)) {
     now = T0 + 3 * 60_000
     const result = await session('lich-b')()
     assert.match(result.context[0], want.edit)
-    assert.match(result.context[0], /send_to_session o lich send|send_to_session 或 lich send/)
+    assert.match(result.context[0], /send_to_session( o| 或| または|이나| или) lich send/)
   })
 
   test(`${tag}: self-command renders the tool notes and the queued answer`, async () => {

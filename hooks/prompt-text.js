@@ -187,8 +187,144 @@ export const es = {
   controlQueued: "{queued} está en cola en esta sesión y se ejecuta cuando termine este turno. Termina el turno ahora.",
 }
 
+/** @type {Record<string, string>} */
+export const ja = {
+  askPreamble:
+    "これは、あなたが作業している間にターンの外から尋ねられた横からの質問です。あなたのターンを中断することはなく、" +
+    "あなたの回答が会話に追加されることもありません。ツールは使えません。どのツールも呼び出さないでください。" +
+    "会話にすでにある内容から、プレーンテキストで簡潔に答えてください。質問：",
+  onBranch: "ブランチ {branch}",
+  whereBranch: "ブランチ {branch} の {path} で、このチェックアウトではありません",
+  whereShared: "同じこのチェックアウト {path} で、あなたと同じようにそのファイルを編集します",
+  backgrounded:
+    'エージェントは lich セッション "{label}" として動いています（{where}）。' +
+    "そのレポート全体は、task notification ではなく [lich] の通知として、このプロンプトに自動で届きます。" +
+    "そのため wait_for_answer を呼ぶ必要はありません（呼んでも動作します）。SendMessage ではそのセッションに届きません。" +
+    "send_to_session または lich send なら届きます。",
+  completedBranch:
+    '作業はブランチ {branch} の {path} にあり（lich セッション "{label}"）、このチェックアウトにはありません。' +
+    "そのセッションには SendMessage ではなく、send_to_session または lich send で連絡してください。",
+  completedShared:
+    '作業は同じこのチェックアウト {path} にあります（lich セッション "{label}"）。' +
+    "そのセッションには SendMessage ではなく、send_to_session または lich send で連絡してください。",
+  denyNeverReached: 'タスクは "{label}" に届きませんでした（{status}）：そのカードを開いてください。',
+  denyAnswered: 'lich は "{label}"{branchPart} について "{status}" と答えました：そのカードを開いてください。',
+  denyInterrupted:
+    "中断されました。lich セッション{branchPart}がすでにタスクを受け取っている可能性があり、" +
+    "そのセッションが送るレポートは [lich] の通知としてここに届きます。",
+  denyStopFailed: 'lich は "{label}" を停止できませんでした：{reason}',
+  lichExited: "lich が終了コード {code} で終了しました",
+  editNoteJustNow: "1 分以内",
+  editNoteAgo: "{minutes} 分前",
+  editNote:
+    "{path} は lich セッション {who} によっても {at}（{ago}）に編集されています。そのセッションはこのチェックアウトを" +
+    "共有しており、まだ作業中かもしれません。このファイルをもとに作業を進める前に読み直し、その変更を取り消すのではなく、" +
+    "send_to_session または lich send でそのセッションと調整してください。",
+  skillNote:
+    "\n\nこのセッションでは、ユーザーが実行を求めたときに、組み込みのスラッシュコマンド（compact、clear など）も" +
+    "ここで指定できます。そのコマンドはキューに入り、あなたのターンが終わると実行されるので、指定したらすぐにターンを終えてください。",
+  controlNote:
+    "\n\nこのセッションでは、action が command のとき、このセッション自身を対象にできます：session に " +
+    '"{sessionId}" を渡してください。コマンドはキューに入り、あなたのターンが終わると実行されるので、すぐにターンを終えてください。',
+  denyDefaultSaved:
+    "/{name} をセッションの中から実行すると、新しいすべての Claude Code セッションのデフォルトとして保存されてしまいます。" +
+    "lich から設定するようユーザーに頼んでください。lich の {name} の上書きはこのセッションにだけ適用されます。",
+  skillQueued: "{queued} はキューに入り、このターンが終わると実行されます。今すぐターンを終えてください。",
+  controlQueued: "{queued} はこのセッションのキューに入り、このターンが終わると実行されます。今すぐターンを終えてください。",
+}
+
+/** @type {Record<string, string>} */
+export const ko = {
+  askPreamble:
+    "이것은 당신이 작업하는 동안 턴 밖에서 들어온 곁가지 질문입니다. 당신의 턴을 중단하지 않으며, 당신의 답은 " +
+    "대화에 추가되지 않습니다. 도구는 사용할 수 없습니다. 어떤 도구도 호출하지 마세요. 대화에 이미 있는 내용으로, " +
+    "일반 텍스트로 짧게 답하세요. 질문: ",
+  onBranch: "브랜치 {branch}",
+  whereBranch: "브랜치 {branch}의 {path}, 이 체크아웃이 아님",
+  whereShared: "같은 체크아웃 {path}, 당신처럼 그 파일을 수정함",
+  backgrounded:
+    '에이전트는 lich 세션 "{label}"에서 실행됩니다({where}). ' +
+    "전체 보고서는 task notification이 아니라 [lich] 메모로 이 프롬프트에 알아서 도착하므로, " +
+    "wait_for_answer를 호출할 필요가 없습니다(호출해도 동작합니다). SendMessage로는 그 세션에 닿을 수 없고, " +
+    "send_to_session이나 lich send로는 닿을 수 있습니다.",
+  completedBranch:
+    '작업은 브랜치 {branch}의 {path}에 있으며(lich 세션 "{label}"), 이 체크아웃에는 없습니다. ' +
+    "그 세션에는 SendMessage가 아니라 send_to_session이나 lich send로 연락하세요.",
+  completedShared:
+    '작업은 같은 체크아웃 {path}에 있습니다(lich 세션 "{label}"). ' +
+    "그 세션에는 SendMessage가 아니라 send_to_session이나 lich send로 연락하세요.",
+  denyNeverReached: '작업이 "{label}"에 한 번도 전달되지 않았습니다({status}): 그 카드를 열어 보세요.',
+  denyAnswered: 'lich의 답은 "{status}"였습니다("{label}"{branchPart}): 그 카드를 열어 보세요.',
+  denyInterrupted:
+    "중단되었습니다. 작업이 이미 lich 세션{branchPart}에 있을 수 있으며, 그 세션이 보내는 보고서는 [lich] 메모로 여기에 도착합니다.",
+  denyStopFailed: 'lich가 "{label}"을(를) 멈추지 못했습니다: {reason}',
+  lichExited: "lich 종료 코드 {code}",
+  editNoteJustNow: "1분 이내",
+  editNoteAgo: "{minutes}분 전",
+  editNote:
+    "{path}은(는) lich 세션 {who}도 {at}({ago})에 수정했습니다. 그 세션은 이 체크아웃을 함께 쓰고 있으며 아직 " +
+    "작업 중일 수 있습니다. 이 파일을 바탕으로 작업을 이어 가기 전에 다시 읽고, 그 변경을 되돌리지 말고 " +
+    "send_to_session이나 lich send로 그 세션과 조율하세요.",
+  skillNote:
+    "\n\n이 세션에서는 사용자가 실행을 요청하면 내장 슬래시 명령(compact, clear 등)도 여기서 지정할 수 있습니다. " +
+    "그 명령은 대기열에 들어갔다가 당신의 턴이 끝나면 실행되므로, 지정한 직후 턴을 끝내세요.",
+  controlNote:
+    "\n\n이 세션에서는 action이 command일 때 이 세션 자체를 대상으로 지정할 수 있습니다: session에 " +
+    '"{sessionId}"를 전달하세요. 명령은 대기열에 들어갔다가 당신의 턴이 끝나면 실행되므로, 직후에 턴을 끝내세요.',
+  denyDefaultSaved:
+    "세션 안에서 /{name}을(를) 실행하면 모든 새 Claude Code 세션의 기본값으로 저장됩니다. " +
+    "사용자에게 lich에서 설정해 달라고 요청하세요. lich의 {name} 재정의는 이 세션에만 적용됩니다.",
+  skillQueued: "{queued}이(가) 대기열에 들어갔고 이 턴이 끝나면 실행됩니다. 지금 턴을 끝내세요.",
+  controlQueued: "{queued}이(가) 이 세션의 대기열에 들어갔고 이 턴이 끝나면 실행됩니다. 지금 턴을 끝내세요.",
+}
+
+/** @type {Record<string, string>} */
+export const ru = {
+  askPreamble:
+    "Это побочный вопрос, заданный вне вашего хода, пока вы работаете. Он не прерывает ваш ход, и ваш ответ " +
+    "не добавляется в разговор. Инструменты недоступны: не вызывайте никаких инструментов. Отвечайте, исходя " +
+    "из того, что уже есть в разговоре, простым текстом и кратко. Вопрос: ",
+  onBranch: "в ветке {branch}",
+  whereBranch: "в ветке {branch} в {path}, а не в этой рабочей копии",
+  whereShared: "в этой же рабочей копии, {path}, и редактирует её файлы так же, как вы",
+  backgrounded:
+    'Агент работает как сессия lich "{label}", {where}. ' +
+    "Его полный отчёт сам придёт в этот промпт как заметка [lich], а не как task notification, поэтому " +
+    "вызывать wait_for_answer не нужно (он по-прежнему работает). SendMessage не может связаться с этой сессией; " +
+    "send_to_session или lich send могут.",
+  completedBranch:
+    'Работа находится в ветке {branch} в {path} (сессия lich "{label}"), а не в этой рабочей копии. ' +
+    "Связывайтесь с этой сессией через send_to_session или lich send, а не через SendMessage.",
+  completedShared:
+    'Работа находится в этой же рабочей копии, {path} (сессия lich "{label}"). ' +
+    "Связывайтесь с этой сессией через send_to_session или lich send, а не через SendMessage.",
+  denyNeverReached: 'задача так и не дошла до "{label}" ({status}): откройте её карточку.',
+  denyAnswered: 'lich ответил "{status}" для "{label}"{branchPart}: откройте её карточку.',
+  denyInterrupted:
+    "прервано; задача, возможно, уже у сессии lich{branchPart}, и отчёт, который она отправит, придёт сюда как заметка [lich].",
+  denyStopFailed: 'lich не смог остановить "{label}": {reason}',
+  lichExited: "lich завершился с кодом {code}",
+  editNoteJustNow: "меньше минуты назад",
+  editNoteAgo: "{minutes} мин назад",
+  editNote:
+    "{path} также редактировала сессия lich {who} в {at} ({ago}); она использует эту же рабочую копию и, возможно, " +
+    "всё ещё работает с ним. Перечитайте файл, прежде чем опираться на него, и согласуйте действия с этой сессией " +
+    "через send_to_session или lich send, а не отменяйте её изменение.",
+  skillNote:
+    "\n\nВ этой сессии здесь также можно назвать встроенную slash-команду (compact, clear и подобные), когда " +
+    "пользователь просит вас её выполнить: она ставится в очередь и выполняется, когда ваш ход закончится, поэтому сразу после этого завершите ход.",
+  controlNote:
+    "\n\nВ этой сессии действие command принимает в качестве цели саму эту сессию: передайте session " +
+    '"{sessionId}". Команда ставится в очередь и выполняется, когда ваш ход закончится, поэтому сразу после этого завершите ход.',
+  denyDefaultSaved:
+    "/{name}, запущенная изнутри сессии, сохранилась бы как значение по умолчанию для каждой новой сессии Claude Code. " +
+    "Попросите пользователя задать это из lich: его переопределение {name} действует только для этой сессии.",
+  skillQueued: "{queued} поставлена в очередь и выполнится, когда этот ход закончится. Завершите ход сейчас.",
+  controlQueued: "{queued} поставлена в очередь в этой сессии и выполнится, когда этот ход закончится. Завершите ход сейчас.",
+}
+
 /** @type {Record<string, Record<string, string>>} */
-const catalogs = { en, "pt-BR": ptBR, "zh-CN": zhCN, es }
+const catalogs = { en, "pt-BR": ptBR, "zh-CN": zhCN, es, ja, ko, ru }
 
 /**
  * The text `key` names in `lang`, its slots filled from `vars`. English stands

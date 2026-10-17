@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The agent-facing mod text also comes in Japanese, Korean and Russian.**
+  `LICH_PROMPT_LANG` values `ja`, `ko` and `ru` select the new catalogs in
+  `hooks/prompt-text.js`, translated from the English source; literals such as
+  `[lich]` and tool and command names stay as they are.
+
 ### Fixed
 
 - **An omp session that resumes another conversation tells lich which.** A
