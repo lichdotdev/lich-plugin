@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A finished Claude Code session no longer goes back to busy on its own.** A
+  subagent's tool calls fired the session's own tool hooks, so a background
+  agent, or the prompt suggestion Claude Code works out after each turn, put the
+  card back on a spinner naming a tool nobody ran, until the next prompt. The
+  card now reports only the session's own tool calls.
+
 ## [0.20.3] - 2026-10-15
 
 ### Added

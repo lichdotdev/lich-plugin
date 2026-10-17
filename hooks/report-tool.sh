@@ -23,9 +23,11 @@ if [ -r "${0%/*}/conversation-id.sh" ]; then
 else
   echo "lich-plugin: hooks/conversation-id.sh missing; reporting without provider_session_id" >&2
   conversation_id() { :; }
+  from_subagent() { return 1; }
 fi
 
 payload=$(cat)
+printf '%s' "$payload" | from_subagent && exit 0
 command -v jq >/dev/null 2>&1 && has_jq=1 || has_jq=
 
 # Prefer jq; fall back to sed so the hook works on Windows, where jq is usually

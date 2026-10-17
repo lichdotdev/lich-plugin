@@ -18,6 +18,7 @@ if [ -r "${0%/*}/conversation-id.sh" ]; then
 else
   echo "lich-plugin: hooks/conversation-id.sh missing; reporting without provider_session_id" >&2
   conversation_id() { :; }
+  from_subagent() { return 1; }
 fi
 
 state=$1
@@ -31,6 +32,10 @@ body="{\"session_id\":\"${LICH_SESSION_ID}\",\"state\":\"${state}\"}"
 exec 3<&0
 payload=$(cat <&3 & reader=$!; (exec >/dev/null 2>&1; sleep 1 && kill "$reader") & wait "$reader")
 exec 3<&-
+
+# Only the tool events a subagent fires are dropped: a turn still opens, blocks
+# and ends on the session's own events.
+[ "$state" = busy ] && printf '%s' "$payload" | from_subagent && exit 0
 
 # `reason` says what the agent is blocked on, and belongs to `waiting` alone —
 # lich drops it on every other state, so no other branch looks for one. It is
