@@ -1,7 +1,7 @@
 // Shows the relay errands a Claude Code session is part of in its status line:
 // who it owes an answer, the tasks it handed out that are still running, and
 // the answers waiting to be collected. Contract: ../docs/mod-status.md,
-// canonical in https://github.com/omartelo/lich/blob/main/docs/hooks/mod-status.md
+// canonical in https://github.com/lichdotdev/lich/blob/main/docs/hooks/mod-status.md
 //
 // The one contract that reads rather than reports, and reading never collects:
 // an answer listed as ready stays in the inbox for the agent.

@@ -1,6 +1,6 @@
 // Reports what a Claude Code session measured about itself to lich. Contract:
 // ../docs/mod-usage.md, canonical in
-// https://github.com/omartelo/lich/blob/main/docs/hooks/mod-usage.md
+// https://github.com/lichdotdev/lich/blob/main/docs/hooks/mod-usage.md
 //
 // A Claude Code mod, not a hook script: hooks/hooks.json names this file under
 // `modules`, beside mod-control.js. It hooks `session.measure`, which fires at

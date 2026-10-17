@@ -1,7 +1,7 @@
 // Answers the task a lich subagent worker was handed with the worker's own last
 // message, the way a native subagent's final message is its result. Contract:
 // ../docs/mod-answer.md, canonical in
-// https://github.com/omartelo/lich/blob/main/docs/hooks/mod-answer.md
+// https://github.com/lichdotdev/lich/blob/main/docs/hooks/mod-answer.md
 //
 // A Claude Code mod, registered by hooks/lich.js beside mod-control.js. Only a
 // worker reports: lich sets LICH_SUBAGENT_DEPTH on every Claude Code session it

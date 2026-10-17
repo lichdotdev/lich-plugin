@@ -1,6 +1,6 @@
 # Mod: worker answer
 
-Client side of the [mod-answer contract](https://github.com/omartelo/lich/blob/main/docs/hooks/mod-answer.md)
+Client side of the [mod-answer contract](https://github.com/lichdotdev/lich/blob/main/docs/hooks/mod-answer.md)
 (the endpoint and the payload are defined in the lich repository; this plugin
 only implements them).
 

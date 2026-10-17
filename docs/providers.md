@@ -2,7 +2,7 @@
 
 lich drives an agent CLI inside a PTY and injects the same three variables
 (`LICH_PORT`, `LICH_TOKEN`, `LICH_SESSION_ID`) into every one it spawns. The
-[hook contracts](https://github.com/omartelo/lich/blob/main/docs/hooks/README.md)
+[hook contracts](https://github.com/lichdotdev/lich/blob/main/docs/hooks/README.md)
 are therefore provider-agnostic: what changes per provider is only *how the
 harness registers hooks* and *what its lifecycle events are called*. A Claude
 Code session also carries `LICH_BIN`; `LICH_SUBAGENT_DEPTH`, how many

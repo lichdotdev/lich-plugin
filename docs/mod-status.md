@@ -1,6 +1,6 @@
 # Mod: status
 
-Client side of the [mod-status contract](https://github.com/omartelo/lich/blob/main/docs/hooks/mod-status.md)
+Client side of the [mod-status contract](https://github.com/lichdotdev/lich/blob/main/docs/hooks/mod-status.md)
 (the endpoint and the response are defined in the lich repository; this plugin
 only implements them).
 

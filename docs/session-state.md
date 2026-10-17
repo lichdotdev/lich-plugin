@@ -1,6 +1,6 @@
 # Hook: session state
 
-Client side of the [session-state contract](https://github.com/omartelo/lich/blob/main/docs/hooks/session-state.md)
+Client side of the [session-state contract](https://github.com/lichdotdev/lich/blob/main/docs/hooks/session-state.md)
 — the contract (transport, endpoint, payload, accepted values) is defined in
 the lich repository; this plugin only implements it.
 
@@ -50,7 +50,7 @@ an approval prompt.
 
 The endpoint, the accepted states and the optional fields (`tool` / `detail`
 on the pre-tool report, `reason` on the waiting one) are spelled out once, in
-[lich's contract](https://github.com/omartelo/lich/blob/main/docs/hooks/session-state.md).
+[lich's contract](https://github.com/lichdotdev/lich/blob/main/docs/hooks/session-state.md).
 What is below is only what each harness gives this plugin to fill them with.
 
 `Notification` fires when Claude needs a permission decision or has been idle

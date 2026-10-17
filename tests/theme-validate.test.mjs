@@ -15,7 +15,7 @@ const template = JSON.parse(
   readFileSync(new URL('../skills/theme/template.json', import.meta.url), 'utf8'),
 )
 
-// The status tones lich 0.53.0 made required (omartelo/lich#617), with the
+// The status tones lich 0.53.0 made required (lichdotdev/lich#617), with the
 // bundled Dark theme's values.
 const tones = {
   'tone-pass': 'oklch(0.696 0.17 162.48)',

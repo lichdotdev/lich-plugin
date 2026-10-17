@@ -1,6 +1,6 @@
 // Lets lich drive a Claude Code session (`lich control`, the `control_session`
 // MCP tool). Contract: ../docs/mod-control.md,
-// canonical in https://github.com/omartelo/lich/blob/main/docs/hooks/mod-control.md
+// canonical in https://github.com/lichdotdev/lich/blob/main/docs/hooks/mod-control.md
 //
 // A Claude Code mod, not a hook script: hooks/hooks.json names this file under
 // `modules`, and Claude Code runs it inside its own process. It reports nothing.

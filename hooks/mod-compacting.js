@@ -1,6 +1,6 @@
 // Reports a Claude Code conversation being compacted to lich, as the
 // session-state contract's `compacting`. Contract: ../docs/session-state.md,
-// canonical in https://github.com/omartelo/lich/blob/main/docs/hooks/session-state.md
+// canonical in https://github.com/lichdotdev/lich/blob/main/docs/hooks/session-state.md
 //
 // A Claude Code mod, registered by hooks/lich.js. It brackets `session.compact`:
 // `compacting` before the compaction runs, and the state the session goes back
