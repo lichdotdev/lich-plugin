@@ -716,6 +716,39 @@ for (const [script, argument] of [['report-state.sh', 'busy'], ['report-tool.sh'
   })
 }
 
+// A subagent's tool calls fire the session's own PreToolUse and PostToolUse,
+// carrying `agent_id` (measured on Claude Code 2.1.302). Its tools still run
+// after the session's Stop: a background agent, and the fork Claude Code runs to
+// suggest the next prompt. Reported, they put a finished card back on busy.
+for (const [script, argument] of [['report-state.sh', 'busy'], ['report-tool.sh', '']]) {
+  const command = `"${ROOT}/hooks/${script}" ${argument}`
+  const subagentCall = JSON.stringify({
+    ...JSON.parse(stdinFor({ provider: 'claude', event: 'PreToolUse' })),
+    agent_id: 'aab6524dbdaf8ca5a',
+    agent_type: 'Explore',
+  })
+
+  for (const [how, env] of [['', {}], [' without jq', { PATH: binWithout('jq') }]]) {
+    test(`${script} leaves a subagent's tool call unreported${how}`, async () => {
+      await withStub(async (stub) => {
+        const result = await runHook(command, { env: { ...lichEnv(stub.port), ...env }, stdin: subagentCall })
+        assertHookSucceeded(result)
+        assert.equal(stub.requests.length, 0, `reported a subagent's call: ${stub.requests[0]?.raw}`)
+      })
+    })
+  }
+
+  test(`${script} still reports a call whose input names an agent_id`, async () => {
+    await withStub(async (stub) => {
+      const payload = JSON.parse(stdinFor({ provider: 'claude', event: 'PreToolUse' }))
+      payload.tool_input = { agent_id: 'not-the-caller' }
+      const result = await runHook(command, { env: lichEnv(stub.port), stdin: JSON.stringify(payload) })
+      assertHookSucceeded(result)
+      assert.equal(stub.requests.length, 1)
+    })
+  })
+}
+
 // lich writes the scripts of a file-shipped harness one by one (Antigravity,
 // Kiro), so an install can carry them without conversation-id.sh. Each says so
 // on stderr and reports what it can without it.

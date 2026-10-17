@@ -224,3 +224,23 @@ the same tool call for the second half of its reason:
 Without `jq` (Windows, usually) the tool name still goes out, read with `sed`
 like the session id is; the detail does not, because a hand-built body cannot
 escape arbitrary text.
+
+### A subagent's tool calls
+
+Claude Code fires the session's own `PreToolUse` and `PostToolUse` for every
+tool a subagent runs, with the session's `session_id` and an `agent_id` the main
+conversation's payloads never carry (measured on 2.1.302). Some of those tools
+run after the session's `Stop`: a background agent still working (measured),
+and most likely the fork Claude Code starts right after `Stop` to write the next
+prompt suggestion, which is a subagent (its `SubagentStop` follows every `Stop`
+by ~1.3s) and was seen once putting a card back on `busy` 2s after `Stop`, with
+a command no transcript holds. Reported, each put a finished card back on a
+spinner naming a tool nobody ran, until the next turn.
+
+So `report-tool.sh`, and `report-state.sh` reporting `busy`, drop a payload that
+carries `agent_id`. Inside a turn this changes nothing on the card but its tool
+line, which keeps naming the `Agent` call while the subagent works. The other
+states are left alone: a turn still opens, blocks and ends on the session's own
+events. No other harness was seen sending the field. Without `jq` the match is
+not anchored to the top level, so a tool input carrying its own `agent_id` goes
+unreported too.
