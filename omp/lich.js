@@ -1,5 +1,5 @@
 // Reports an omp (oh-my-pi) session to lich. Contracts: ../docs/, canonical in
-// https://github.com/omartelo/lich/tree/main/docs/hooks
+// https://github.com/lichdotdev/lich/tree/main/docs/hooks
 //
 // omp runs no hook commands. `--hook` and `--extension` are the same list — it
 // merges both into one set of extension paths and loads every entry as a module

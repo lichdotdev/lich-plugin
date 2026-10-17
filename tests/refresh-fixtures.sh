@@ -16,7 +16,7 @@ set -eu
 
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 ref=$(tr -d '[:space:]' <"$here/lich-ref")
-raw=https://raw.githubusercontent.com/omartelo/lich/$ref
+raw=https://raw.githubusercontent.com/lichdotdev/lich/$ref
 base=$raw/docs/hooks/fixtures
 
 for file in session-start.jsonl session-state.jsonl session-title.jsonl \

@@ -1,5 +1,5 @@
 // Reports an opencode session to lich. Contracts: ../docs/, canonical in
-// https://github.com/omartelo/lich/tree/main/docs/hooks
+// https://github.com/lichdotdev/lich/tree/main/docs/hooks
 //
 // opencode loads a module rather than running a script, so this one file plays
 // the part the four hooks/*.sh scripts play on the other harnesses. Same

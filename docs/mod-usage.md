@@ -1,6 +1,6 @@
 # Mod: usage
 
-Client side of the [mod-usage contract](https://github.com/omartelo/lich/blob/main/docs/hooks/mod-usage.md)
+Client side of the [mod-usage contract](https://github.com/lichdotdev/lich/blob/main/docs/hooks/mod-usage.md)
 (the endpoint and the payload are defined in the lich repository; this plugin
 only implements them).
 

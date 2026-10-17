@@ -1,6 +1,6 @@
 # Hook: session touched
 
-Client side of the [session-touched contract](https://github.com/omartelo/lich/blob/main/docs/hooks/session-touched.md)
+Client side of the [session-touched contract](https://github.com/lichdotdev/lich/blob/main/docs/hooks/session-touched.md)
 — the contract (transport, endpoint, payload, accepted values) is defined in
 the lich repository; this plugin only implements it.
 

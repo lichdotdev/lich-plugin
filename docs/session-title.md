@@ -1,6 +1,6 @@
 # Hook: session title
 
-Client side of the [session-title contract](https://github.com/omartelo/lich/blob/main/docs/hooks/session-title.md)
+Client side of the [session-title contract](https://github.com/lichdotdev/lich/blob/main/docs/hooks/session-title.md)
 — the contract (transport, endpoint, payload, accepted values) is defined in
 the lich repository; this plugin only implements it.
 

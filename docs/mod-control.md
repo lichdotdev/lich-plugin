@@ -1,6 +1,6 @@
 # Mod: control
 
-Client side of the [mod-control contract](https://github.com/omartelo/lich/blob/main/docs/hooks/mod-control.md)
+Client side of the [mod-control contract](https://github.com/lichdotdev/lich/blob/main/docs/hooks/mod-control.md)
 (the endpoints, the commands and the ack are defined in the lich repository;
 this plugin only implements them).
 

@@ -1,6 +1,6 @@
 # Hook: session start
 
-Client side of the [session-start contract](https://github.com/omartelo/lich/blob/main/docs/hooks/session-start.md)
+Client side of the [session-start contract](https://github.com/lichdotdev/lich/blob/main/docs/hooks/session-start.md)
 — the contract (transport, endpoint, payload, accepted values) is defined in
 the lich repository; this plugin only implements it.
 

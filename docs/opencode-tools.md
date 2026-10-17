@@ -7,7 +7,7 @@ new one, rename one, close one, drive or ask one, look at the worktrees, file
 them into folders.
 
 lich exposes those operations twice, and both are documented in
-[`docs/cli.md`](https://github.com/omartelo/lich/blob/main/docs/cli.md) there:
+[`docs/cli.md`](https://github.com/lichdotdev/lich/blob/main/docs/cli.md) there:
 as the `lich` command line, and as MCP tools it registers at spawn for the
 harnesses that can be told on their own command line — Claude Code and Codex.
 **opencode cannot be**, and a plugin there cannot register an MCP server either.
