@@ -5,10 +5,10 @@
   "author": {
     "name": "omartelo"
   },
-  "homepage": "https://github.com/omartelo/lich-plugin",
+  "homepage": "https://github.com/lichdotdev/lich-plugin",
   "repository": {
     "type": "git",
-    "url": "https://github.com/omartelo/lich-plugin.git"
+    "url": "https://github.com/lichdotdev/lich-plugin.git"
   },
   "keywords": [
     "lich",
