@@ -18,6 +18,7 @@ reply instructions, and answers the errand with what this mod posts.
 |-------------------------------------------|-------------------------------------------------------------|
 | `classic.Stop`, then `turn.complete{reason=answer}` | `POST /mod/answer` with `{"session_id", "text"}`  |
 | `classic.Stop` with a blank message, then `turn.complete{reason=answer}` | `POST /mod/answer` with `{"session_id", "unanswered": "blank"}` |
+| `turn.complete{reason=answer}` in a session that never saw a `classic.Stop` | the same two bodies, from the completion's `answer` |
 
 ## How it behaves
 
@@ -52,6 +53,24 @@ reply instructions, and answers the errand with what this mod posts.
   `error`, `aborted`), which keeps the hooks beside mod-control's own
   `turn.complete` hook: Claude Code refuses one plugin's second hook on an event
   with no matcher. Every one of them drops the `Stop` it read.
+- **A worker whose `classic.Stop` is bypassed answers from `turn.complete`.**
+  Measured on Claude Code 2.1.306: on a machine with managed settings (Team
+  and Enterprise organizations) the builtin `cc-plugin-sec-default` seats
+  itself outermost and sends `classic.Stop` on past the plugins a person
+  installs; the engine marks the mod's hook `skipped` ("bypassed by") and tells
+  the model, but no mod call says so. The mod infers it from a session that has
+  not seen a single `classic.Stop`: one main-loop `turn.complete` with reason
+  `answer` then posts its `answer`, or `unanswered: "blank"` for a blank one.
+  The bypass follows the settings the session started with, so once a `Stop`
+  has been seen the Stop rule above holds for the rest of the session.
+- **Without a `Stop`, only a subagent can hold the answer back.** There is no
+  `background_tasks` to read. `$.agent.list()` names the session's subagents
+  (not its shells, monitors or workflows), and one listed `running` or
+  `waiting`, or a list that cannot be read, holds the turn's report. A turn
+  that handed a background shell, monitor or workflow off answers with what it
+  said when it did, and lich takes the first answer, so the resumed turn's
+  answer is lost. Pending until the engine exposes the background tasks, or
+  the bypass, to a mod.
 - **A subagent's turn inside the worker does not answer.** `classic.Stop` fires
   on the main loop only, and a `turn.complete` that carries an `agentId` is
   skipped.
