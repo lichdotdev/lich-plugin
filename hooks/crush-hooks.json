@@ -3,13 +3,13 @@
     "PreToolUse": [
       {
         "name": "lich session id",
-        "command": "<lich-plugin>/hooks/report-session-start.sh crush",
+        "command": "\"<lich-plugin>/hooks/report-session-start.sh\" crush",
         "timeout": 5
       },
       {
         "name": "lich git-status refresh",
         "matcher": "^(edit|write|multiedit|bash)$",
-        "command": "<lich-plugin>/hooks/report-touched.sh",
+        "command": "\"<lich-plugin>/hooks/report-touched.sh\"",
         "timeout": 5
       }
     ]

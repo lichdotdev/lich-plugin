@@ -61,7 +61,7 @@ function runHook(command, { env = {}, stdin = '', pluginRoot = true, tmpdir = nu
       env: {
         ...BASE_ENV,
         TMPDIR: tmpdir ?? mkdtempSync(path.join(TMP, 'run-')),
-        ...(pluginRoot ? { CLAUDE_PLUGIN_ROOT: ROOT } : {}),
+        ...(pluginRoot ? { CLAUDE_PLUGIN_ROOT: SPACED_ROOT } : {}),
         ...env,
       },
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -98,6 +98,14 @@ function assertHookSucceeded(result, stdout = '') {
 
 // ------------------------------------------------------------ registrations --
 
+const TMP = mkdtempSync(path.join(tmpdir(), 'lich-plugin-test-'))
+
+// The plugin root a harness hands the hooks, with a space in it: on macOS it
+// sits under ~/Library/Application Support, and an unquoted expansion splits
+// there and every hook runs a path that does not exist (issue #90).
+const SPACED_ROOT = path.join(TMP, 'Application Support')
+symlinkSync(ROOT, SPACED_ROOT)
+
 const HOOK_FILES = [
   { provider: 'claude', file: 'hooks/hooks.json' },
   { provider: 'codex', file: 'hooks/codex-hooks.json' },
@@ -109,7 +117,8 @@ const HOOK_FILES = [
 ]
 
 // Crush has no plugin root to expand, so its registration ships the clone's
-// path as a placeholder the user replaces. Here it becomes this checkout.
+// path as a placeholder the user replaces. Here it becomes this checkout, under
+// the same spaced path the other harnesses get.
 const PLUGIN_ROOT_PLACEHOLDER = '<lich-plugin>'
 
 const SCRIPTS = {
@@ -172,8 +181,8 @@ function registrations() {
         for (const hook of hooksIn(group)) {
           const script = Object.keys(SCRIPTS).find((s) => hook.command.includes(s))
           assert.ok(script, `unknown script in ${file}: ${hook.command}`)
-          const command = hook.command.split(PLUGIN_ROOT_PLACEHOLDER).join(ROOT)
-          const { report, stdout } = splitVerdict(command)
+          const command = hook.command.split(PLUGIN_ROOT_PLACEHOLDER).join(SPACED_ROOT)
+          const { report, stdout } = splitVerdict(hook.command)
           out.push({
             provider,
             file,
@@ -196,8 +205,6 @@ function registrations() {
 const REGISTRATIONS = registrations()
 
 // ------------------------------------------------------------- transcripts --
-
-const TMP = mkdtempSync(path.join(tmpdir(), 'lich-plugin-test-'))
 
 /** Claude Code keeps its generated title in the transcript as an ai-title line. */
 function claudeTranscript(title, name = 'claude.jsonl') {
