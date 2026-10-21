@@ -90,3 +90,14 @@ test('a refused turn, which fires no Stop, reports nothing', async ($, on) => {
   await clock.settle()
   expect(world.answers).toEqual([])
 })
+
+test('a worker whose classic.Stop never fires answers from turn.complete', async ($, on) => {
+  mock.env(on, WORKER)
+  const clock = mock.clock(on)
+  const world = lich(on)
+  on('agent.list', async () => ({ value: [] }))
+  await $.session.start({ cwd: '/w', surface: 'terminal', isInteractive: true })
+  await $.turn.complete(ANSWERED)
+  await clock.settle()
+  expect(world.answers).toEqual([{ session_id: 'lich-1', text: 'Rewrote docs/cli.md.' }])
+})

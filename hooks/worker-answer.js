@@ -21,6 +21,18 @@
 // `last_assistant_message` equals the completion's `answer`; an aborted turn
 // fires no Stop.
 //
+// A session that never saw a `classic.Stop` reports from `turn.complete`
+// alone. Measured on Claude Code 2.1.306: the builtin cc-plugin-sec-default,
+// seated outermost on a machine with managed settings, sends `classic.Stop` on
+// past user-installed plugins ("bypassed by", "hook was skipped"), and no mod
+// call says so, so the mod infers it from a session with no Stop. That is set
+// by the settings the session started with, which is why one Stop is enough to
+// keep the Stop rule above for the rest of the session. Without a Stop there
+// is no `background_tasks`: the only running work the mod can still see is a
+// subagent `$.agent.list()` names running or waiting, which holds the report.
+// A background shell, monitor or workflow is not listed there, so a turn that
+// handed one off answers early, and lich takes the first answer.
+//
 // A refused turn and one an API error ended report nothing, though the
 // contract has `unanswered: "refusal"` and `"error"` for them. Measured on
 // Claude Code 2.1.296, both end through `StopFailure` (a refusal with error
@@ -47,7 +59,7 @@ const ANSWER_LIMIT = 16000
  * @typedef {import('claude-code').EngineInterface} Engine
  * @typedef {{ base: string, token: string, session: string }} Link
  * @typedef {{ idle: boolean, text: string }} Stop
- * @typedef {{ link?: Link, stop?: Stop }} State
+ * @typedef {{ link?: Link, stop?: Stop, stopSeen?: boolean }} State
  * @typedef {{ text: string } | { unanswered: "blank" }} Report
  */
 
@@ -102,6 +114,43 @@ function reportOf(stop, e) {
 }
 
 /**
+ * What a main-loop turn of a session whose `classic.Stop` never fires reports.
+ *
+ * @param {import('claude-code').TurnCompleteInput} e
+ * @returns {Report | undefined}
+ */
+function reportWithoutStop(e) {
+  if (e.reason !== "answer") return undefined
+  return e.answer.trim() === "" ? { unanswered: "blank" } : { text: cut(e.answer) }
+}
+
+/**
+ * Whether a subagent is still at work. One the list cannot be read for counts
+ * as at work: the first answer lich hears wins, so an early one is worse than
+ * none.
+ *
+ * @param {Engine} $
+ */
+async function subagentAtWork($) {
+  try {
+    const agents = await $.agent.list()
+    return agents.some((agent) => agent.status === "running" || agent.status === "waiting")
+  } catch {
+    return true
+  }
+}
+
+/**
+ * @param {Engine} $
+ * @param {Link} link
+ * @param {Report} body
+ */
+async function reportUnlessSubagentAtWork($, link, body) {
+  if (await subagentAtWork($)) return
+  await report($, link, body)
+}
+
+/**
  * Posts one report beside the chain. One that cannot be sent is dropped: the
  * worker's card still holds it, and a second copy of a report is worse than
  * none.
@@ -132,8 +181,14 @@ function settleTurn($, state, e, next) {
   const stop = state.stop
   state.stop = undefined
   const link = state.link
-  const body = link !== undefined && e.agentId === undefined ? reportOf(stop, e) : undefined
-  if (link !== undefined && body !== undefined) void report($, link, body)
+  if (link === undefined || e.agentId !== undefined) return next(e)
+  if (state.stopSeen) {
+    const body = reportOf(stop, e)
+    if (body !== undefined) void report($, link, body)
+    return next(e)
+  }
+  const body = reportWithoutStop(e)
+  if (body !== undefined) void reportUnlessSubagentAtWork($, link, body)
   return next(e)
 }
 
@@ -150,6 +205,7 @@ export function register(on) {
   })
 
   on("classic.Stop", ($, e, next) => {
+    state.stopSeen = true
     state.stop = { idle: (e.background_tasks ?? []).length === 0, text: e.last_assistant_message ?? "" }
     return next(e)
   })

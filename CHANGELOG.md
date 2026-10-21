@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A lich worker answers its errand when its `classic.Stop` hook is
+  bypassed.** On a machine with managed settings, Claude Code's builtin
+  `cc-plugin-sec-default` sends `classic.Stop` on past user plugins, and the
+  worker never answered, so the caller waited until the ticket expired. A
+  session that never saw a `Stop` now answers from `turn.complete`, held back
+  only while `$.agent.list()` shows a subagent at work; a turn that handed a
+  background shell, monitor or workflow off answers early
+  (`docs/mod-answer.md`).
+
 ## [0.20.7] - 2026-10-21
 
 ### Fixed

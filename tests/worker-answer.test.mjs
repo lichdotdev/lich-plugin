@@ -42,7 +42,7 @@ const settle = () => new Promise((r) => setTimeout(r, 20))
  * Registers the module against a fake engine. A hook registered with a
  * matcher runs only for an event that matches it, as the engine runs it.
  */
-function load({ env = WORKER_ENV, answer = () => Promise.resolve(NO_CONTENT) } = {}) {
+function load({ env = WORKER_ENV, answer = () => Promise.resolve(NO_CONTENT), agents = async () => [] } = {}) {
   const hooks = new Map()
   register((event, ...rest) => {
     const hook = rest.pop()
@@ -51,6 +51,7 @@ function load({ env = WORKER_ENV, answer = () => Promise.resolve(NO_CONTENT) } =
   const requests = []
   const $ = {
     env: { get: async (name) => env[name] },
+    agent: { list: agents },
     http: {
       fetch: (url, init = {}) => {
         const { pathname, search } = new URL(url)
@@ -272,4 +273,81 @@ test('the turn is never held up by lich, and a failure is dropped', async () => 
   await failing.start()
   await failing.turn(stop('Done.'), complete('Done.'))
   assert.equal(failing.requests.length, 1, 'a failed answer was retried')
+})
+
+// Measured on Claude Code 2.1.306: under managed settings the builtin
+// cc-plugin-sec-default sends classic.Stop on past user plugins, so a worker
+// there sees turn.complete alone.
+test('a worker whose Stop is bypassed answers from the completion', async () => {
+  const mod = load()
+  await mod.start()
+
+  await mod.turn(undefined, complete('Rewrote docs/cli.md.'))
+
+  assert.equal(mod.requests.length, 1)
+  assertContractHonoured('/mod/answer', mod.requests[0])
+  assert.deepEqual(mod.bodies()[0], { session_id: LICH_SESSION_ID, text: 'Rewrote docs/cli.md.' })
+})
+
+test('a blank turn whose Stop is bypassed is reported unanswered', async () => {
+  const mod = load()
+  await mod.start()
+
+  await mod.turn(undefined, complete(' \n'))
+
+  assert.deepEqual(mod.bodies(), [{ session_id: LICH_SESSION_ID, unanswered: 'blank' }])
+  assertContractHonoured('/mod/answer', mod.requests[0])
+})
+
+test("a subagent's turn answers nothing when the Stop is bypassed", async () => {
+  const mod = load()
+  await mod.start()
+
+  await mod.turn(undefined, { ...complete('SUBDONE'), agentId: 'af8fcd1f2b867337f' })
+
+  assert.equal(mod.requests.length, 0)
+})
+
+test('a refused, failed or aborted turn whose Stop is bypassed reports nothing', async () => {
+  const mod = load()
+  await mod.start()
+
+  await mod.turn(undefined, complete('', 'refusal'))
+  await mod.turn(undefined, complete('', 'error'))
+  await mod.turn(undefined, complete('half a sentence', 'aborted'))
+
+  assert.equal(mod.requests.length, 0)
+})
+
+// $.agent.list() as Claude Code 2.1.306 answers it: subagents only, no shells.
+test('a bypassed Stop holds the answer while a subagent is still at work', async () => {
+  let agents = [{ id: 'a1', description: 'scan', type: 'local_agent', status: 'running' }]
+  const mod = load({ agents: async () => agents })
+  await mod.start()
+
+  await mod.turn(undefined, complete('WAITING'))
+  assert.equal(mod.requests.length, 0, 'answered while a subagent still ran')
+
+  agents = [{ ...agents[0], status: 'completed' }]
+  await mod.turn(undefined, complete('FINISHED: DONE'))
+  assert.deepEqual(mod.bodies().map((b) => b.text), ['FINISHED: DONE'])
+})
+
+test('a bypassed Stop holds the answer when the subagents cannot be listed', async () => {
+  const mod = load({ agents: () => Promise.reject(new Error('no session bound')) })
+  await mod.start()
+
+  await mod.turn(undefined, complete('Done.'))
+
+  assert.equal(mod.requests.length, 0)
+})
+
+test('a session that saw a Stop keeps answering from Stops only', async () => {
+  const mod = load()
+  await mod.start()
+
+  await mod.turn(stop('Done.'), complete('Done.'))
+  await mod.turn(undefined, complete('something else'))
+
+  assert.deepEqual(mod.bodies().map((b) => b.text), ['Done.'])
 })
