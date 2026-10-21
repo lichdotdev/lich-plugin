@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Claude Code hooks run when the plugin's path has a space in it.** On macOS
+  lich keeps the plugin under `~/Library/Application Support`, and the
+  unquoted `${CLAUDE_PLUGIN_ROOT}` split there, so every hook failed to start
+  and the card got no state, title or touched files. The Claude Code
+  registration quotes the path now, as the Codex one already did, and so does
+  the `<lich-plugin>` placeholder in the Crush block (#90).
+
 ## [0.20.6] - 2026-10-17
 
 ### Changed
