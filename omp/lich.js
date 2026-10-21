@@ -82,6 +82,24 @@ function conversation(ctx) {
 
 // omp catches what a handler throws, but a throwing extension is still a
 // visible startup warning and a line in its log. Nothing here is worth either.
+// omp heads a generated title with a card, `<icon> <CODE>: <title>` (its
+// `title.icons` setting, on by default; measured on 18.8.9), which a lich card
+// would show as a Nerd Font glyph and a shouting prefix. The pattern and the
+// icon test mirror omp's own `splitCardTitle` (src/utils/title-card.ts): an
+// icon is non-ASCII and at most 8 codepoints, so `Fix: the parser` stays whole.
+const CARD_LINE = /^(\S+) ([A-Z0-9]{1,6}): (\S.*)$/u
+const MAX_ICON_CODEPOINTS = 8
+
+function cardIcon(icon) {
+  const chars = [...icon]
+  return chars.length <= MAX_ICON_CODEPOINTS && chars.every((char) => char.charCodeAt(0) >= 0x80)
+}
+
+function withoutCard(title) {
+  const line = CARD_LINE.exec(title)
+  return line && cardIcon(line[1]) ? line[3] : title
+}
+
 const safely = (fn) => (event, ctx) => {
   try {
     fn(event, ctx)
@@ -106,7 +124,7 @@ export default function lichPlugin(pi) {
   // is its last still reports the title that turn produced, one turn later.
   const reportTitle = (ctx) => {
     const title = ctx?.sessionManager?.getSessionName?.()
-    const trimmed = typeof title === "string" ? title.trim() : ""
+    const trimmed = typeof title === "string" ? withoutCard(title.trim()) : ""
     if (!trimmed || trimmed === reportedTitle) return
     reportedTitle = trimmed
     report("session-title", { title: trimmed })

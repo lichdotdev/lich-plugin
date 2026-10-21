@@ -237,6 +237,33 @@ function codexTranscript(message, name = 'codex.jsonl') {
   return file
 }
 
+/**
+ * Codex 0.147.0 and later: a paginated rollout writes no user_message event,
+ * only the message as a completed UserMessage item (measured on 0.162.1).
+ */
+function codexPaginatedTranscript(message, name = 'codex-paginated.jsonl') {
+  const file = path.join(TMP, name)
+  const lines = [
+    JSON.stringify({ timestamp: '2026-10-21T12:00:00.000Z', type: 'session_meta', payload: { cli_version: '0.162.1' } }),
+    ...(message === null
+      ? []
+      : [
+          JSON.stringify({
+            timestamp: '2026-10-21T12:00:01.000Z',
+            type: 'event_msg',
+            payload: { type: 'item_started', item: { type: 'UserMessage', content: [{ type: 'text', text: message }] } },
+          }),
+          JSON.stringify({
+            timestamp: '2026-10-21T12:00:01.000Z',
+            type: 'event_msg',
+            payload: { type: 'item_completed', item: { type: 'UserMessage', content: [{ type: 'text', text: message }] } },
+          }),
+        ]),
+  ]
+  writeFileSync(file, lines.join('\n') + '\n')
+  return file
+}
+
 /** Antigravity names a thread after its first USER_INPUT content. */
 function antigravityTranscript(content, name = 'antigravity.jsonl') {
   const file = path.join(TMP, name)
@@ -819,6 +846,8 @@ const NO_TITLE = [
   ['codex rollout without a user message', () => codexTranscript(null, 'no-message.jsonl')],
   ['codex first line that is whitespace', () => codexTranscript('   \nreal work', 'blank-line.jsonl')],
   ['codex message that is a newline', () => codexTranscript('\nreal work', 'leading-nl.jsonl')],
+  ['codex paginated rollout without a user message', () => codexPaginatedTranscript(null, 'paginated-no-message.jsonl')],
+  ['codex paginated first line that is whitespace', () => codexPaginatedTranscript('   \nreal work', 'paginated-blank-line.jsonl')],
   ['antigravity transcript without user input', () => antigravityTranscript(null, 'no-user-input.jsonl')],
   ['antigravity user input that is whitespace', () => antigravityTranscript('   ', 'blank-user-input.jsonl')],
 ]
@@ -848,6 +877,7 @@ for (const [label, make] of NO_TITLE) {
 // cannot do. A title written in English would pass either way.
 for (const [provider, make] of [
   ['codex', codexTranscript],
+  ['codex paginated', codexPaginatedTranscript],
   ['antigravity', antigravityTranscript],
 ]) {
   test(`session-title caps ${provider} by character, not by byte`, async () => {
@@ -870,6 +900,19 @@ for (const [provider, make] of [
     })
   })
 }
+
+test('session-title reports the first line of a paginated Codex rollout', async () => {
+  await withStub(async (stub) => {
+    const file = codexPaginatedTranscript('Fix the replay ring overflow\nand its second line')
+    const result = await runHook(`"${ROOT}/hooks/report-title.sh"`, {
+      env: lichEnv(stub.port),
+      stdin: JSON.stringify({ session_id: 's', transcript_path: file }),
+    })
+    assertHookSucceeded(result)
+    assert.equal(stub.requests.length, 1)
+    assert.equal(assertContractHonoured('/session-title', stub.requests[0]).body.title, 'Fix the replay ring overflow')
+  })
+})
 
 test('session-title trims the title it reports', async () => {
   await withStub(async (stub) => {
