@@ -39,7 +39,9 @@ stdin), in their own shape — the script reads whichever is there:
 - **Codex** — the first `user_message` event, field `payload.message`, first
   line. Codex generates no title: it names a thread after its first user message
   verbatim (`threads.title` in its state database), so this reports the same
-  label Codex shows, only trimmed to card size.
+  label Codex shows, only trimmed to card size. Codex 0.147.0 and later write
+  no `user_message` event; there it is the first `item_completed` event whose
+  `payload.item.type` is `UserMessage`, its first `text` content.
 - **Antigravity** — the first `USER_INPUT` entry's `content` text, unwrapping
   `<USER_REQUEST>` block tags and keeping the first non-blank line.
 
@@ -66,6 +68,8 @@ written in English never shows it.
   turn settles and when the next one starts, and sends it only when it differs
   from the last one sent. A session whose only turn is its last still reports
   its title, one turn late; a session that never gets a second turn reports
-  none.
+  none. A title headed by omp's card (`<icon> <CODE>: <title>`, its
+  `title.icons` setting, on by default) is sent without the card, matched the
+  way omp's own `splitCardTitle` matches it.
 - **Crush** — nothing to report. Its one event, `PreToolUse`, is about the tool;
   a Crush card keeps the name lich gave it.

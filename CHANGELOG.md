@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A Codex card is titled again.** Codex 0.147.0 and later write no
+  `user_message` event into the rollout, which is where the title was read
+  from, so a Codex card kept the name lich gave it. The first user message is
+  now also read from the completed `UserMessage` item those versions write
+  (`docs/session-title.md`).
+- **An omp card no longer shows omp's title card.** omp heads a generated title
+  with an icon and a code (`󰧿 LIGHT: Write lighthouse fog haiku`), and the card
+  showed all of it. The title is sent without them.
+
 - **A lich worker answers its errand when its `classic.Stop` hook is
   bypassed.** On a machine with managed settings, Claude Code's builtin
   `cc-plugin-sec-default` sends `classic.Stop` on past user plugins, and the

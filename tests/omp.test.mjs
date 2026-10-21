@@ -320,6 +320,25 @@ test('a title that only lands after the turn is reported on the next one', async
   assert.equal(assertContractHonoured('/session-title', titles[0]).body.title, 'Add the omp client')
 })
 
+// omp's title cards (`title.icons`, on by default) head the title with an icon
+// and a code; the card is omp's, the title after it is the conversation's.
+for (const [label, title, want] of [
+  ['a Nerd Font card', '\u{F09FF} LIGHT: Write lighthouse fog haiku', 'Write lighthouse fog haiku'],
+  ['an emoji card', '🧪 FLAKY: Fix flaky tests', 'Fix flaky tests'],
+  ['a plain title shaped like one', 'Fix: the parser', 'Fix: the parser'],
+  ['an ASCII word before the code', 'Bug FIX: the parser', 'Bug FIX: the parser'],
+]) {
+  test(`the title is reported without omp's card: ${label}`, async () => {
+    const requests = await reportsFor(
+      ({ emit }) => emit('session_stop', stopEvent(), ctxWith({ title })),
+      { expected: 2 },
+    )
+    const titles = only(requests, '/session-title')
+    assert.equal(titles.length, 1)
+    assert.equal(assertContractHonoured('/session-title', titles[0]).body.title, want)
+  })
+}
+
 test('an unchanged title is not re-sent', async () => {
   const requests = await reportsFor(
     ({ emit }) => {

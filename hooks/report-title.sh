@@ -42,6 +42,15 @@ if [ -z "$title" ]; then
     | head -n 1)
 fi
 
+# Codex 0.147.0 and later write no user_message event: the paginated rollout
+# carries the message as a completed UserMessage item instead.
+if [ -z "$title" ]; then
+  title=$(grep '"type":"UserMessage"' "$transcript_path" 2>/dev/null \
+    | jq -r 'select(.payload.type == "item_completed")
+      | [.payload.item.content[]? | select(.type == "text") | .text][0] // empty' 2>/dev/null \
+    | head -n 1)
+fi
+
 # Antigravity: names a thread after its first USER_INPUT content.
 if [ -z "$title" ]; then
   title=$(grep '"type":"USER_INPUT"' "$transcript_path" 2>/dev/null \
