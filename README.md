@@ -9,13 +9,12 @@ The agent side of the [lich](https://github.com/lichdotdev/lich) integration. li
 
 The four are what Claude Code, Codex, Antigravity, opencode and omp report. **Crush reports two of them** — its session id and the git-status refresh — because `PreToolUse` is the only event it has, and a state nothing can end is worse on a card than no state. **omp reports all four minus the bell**: no event of its own for "your turn" has been measured yet, so its card shows a spinner while the agent waits on you. [docs/providers.md](docs/providers.md) has the event mapping per harness.
 
-On **opencode** it also carries the other direction: the seven operations lich
-offers a session for driving the sessions beside it — list, send, wait, reply,
-open, close, and read the worktrees — as tools of opencode's own. Claude Code and
-Codex get those as MCP tools lich registers when it spawns them; opencode cannot
-be told about a server on its command line, so they are defined in the module
-instead. [docs/opencode-tools.md](docs/opencode-tools.md) has the list and the
-two cases where they are deliberately absent.
+On **opencode** under a lich from before it registered its MCP server there, it
+also carries the other direction: the operations lich offers a session for
+driving the sessions beside it, as tools of opencode's own. A newer lich hands
+opencode that server at spawn, as it does Claude Code and Codex, and the module
+then defines none. [docs/opencode-tools.md](docs/opencode-tools.md) has the
+list and the cases where they are deliberately absent.
 
 On **Claude Code** it carries the other direction too, from lich to the session:
 a mod, a module Claude Code runs in its own process, takes the commands given

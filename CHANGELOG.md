@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **opencode leaves lich's operations to lich's MCP server.** A lich that hands
+  opencode its MCP server at spawn puts it in `OPENCODE_CONFIG_CONTENT`, and the
+  module then defines no tools of its own, so each operation is listed once and
+  the `browser_*` tools are there with the rest. Under an older lich, which
+  registers nothing, the tools are defined as before (`docs/opencode-tools.md`).
+
 ### Fixed
 
 - **A Codex card is titled again.** Codex 0.147.0 and later write no

@@ -129,11 +129,12 @@ function runner($) {
 // lichTools is the other half of this plugin: the reports above tell lich what a
 // session is doing, and these let that session act on the ones beside it.
 //
-// opencode has no way to register an MCP server from a plugin, which is how
-// Claude Code and Codex get the same operations — but it does let a plugin
-// define tools, so the tools are defined here and the transport disappears.
+// A lich that hands opencode its MCP server at spawn puts it in
+// $OPENCODE_CONFIG_CONTENT, and every operation is there under the `lich`
+// server, so nothing is defined here: each would be listed twice. A lich from
+// before that registers nothing, and its sessions get the tools below instead.
 //
-// Two guards, both about not breaking what already works:
+// Two more guards, both about not breaking what already works:
 //
 //   - Nothing is registered outside lich. The module is a no-op there by
 //     design, and tools that could only answer "no lich is running" would be
@@ -149,10 +150,21 @@ function runner($) {
 // because opencode loads *every* export of a plugin module as a plugin: a
 // second export would be called with a plugin input and its return value read
 // for hook keys, which took the server down when it was null.
+// lichServerRegistered reports whether lich put its MCP server in opencode's
+// inline config at spawn. A value that is not JSON registers nothing.
+function lichServerRegistered() {
+  try {
+    return Boolean(JSON.parse(process.env.OPENCODE_CONFIG_CONTENT ?? "{}")?.mcp?.lich)
+  } catch {
+    return false
+  }
+}
+
 async function lichTools($, helper) {
   if (!$ || !process.env.LICH_PORT || !process.env.LICH_TOKEN || !process.env.LICH_SESSION_ID) {
     return null
   }
+  if (lichServerRegistered()) return null
   let tool = helper
   if (!tool) {
     try {

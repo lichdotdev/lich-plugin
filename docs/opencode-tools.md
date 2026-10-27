@@ -8,10 +8,11 @@ them into folders.
 
 lich exposes those operations twice, and both are documented in
 [`docs/cli.md`](https://github.com/lichdotdev/lich/blob/main/docs/cli.md) there:
-as the `lich` command line, and as MCP tools it registers at spawn for the
-harnesses that can be told on their own command line — Claude Code and Codex.
-**opencode cannot be**, and a plugin there cannot register an MCP server either.
-What it can do is define tools, so that is what `opencode/lich.js` does.
+as the `lich` command line, and as MCP tools it registers at spawn — for
+opencode through `$OPENCODE_CONFIG_CONTENT`, the inline config it merges over
+its files. A lich from before that registration hands opencode nothing, and a
+plugin there cannot register an MCP server, but it can define tools, so that is
+what `opencode/lich.js` does for those sessions.
 
 ## What is registered
 
@@ -54,9 +55,13 @@ environment belongs to this session.
 
 ## When they are absent
 
-Two cases, both deliberate, and in both the **reports keep working** — they need
-neither of the things below:
+Three cases, all deliberate, and in each the **reports keep working** — they
+need none of the things below:
 
+- **lich registered its server.** A `lich` entry under `mcp` in
+  `$OPENCODE_CONFIG_CONTENT` means the session already has every operation from
+  lich's own MCP server, `browser_*` included. Defining them here too would list
+  each one twice.
 - **Outside lich.** No `LICH_PORT` / `LICH_TOKEN` / `LICH_SESSION_ID` in the
   environment means no tools registered at all. Tools that could only answer
   "no lich is running" would be that many tools in the prompt of every
