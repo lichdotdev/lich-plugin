@@ -117,6 +117,28 @@ test('every operation lich offers is a tool', async () => {
   })
 })
 
+// A lich that hands opencode its MCP server at spawn puts it in the inline
+// config, and every operation is there under the `lich` server. Defining them
+// again would list each one twice; an older lich, which registers nothing,
+// still gets them here.
+test('no tools when lich registered its MCP server at spawn', async () => {
+  const registered = JSON.stringify({ mcp: { lich: { type: 'local', command: ['/opt/lich/lich', 'mcp'] } } })
+  await withEnv({ ...INSIDE_LICH, OPENCODE_CONFIG_CONTENT: registered }, async () => {
+    const plugin = await LichPlugin({ $: fakeShell().$ }, fakeHelper())
+    assert.equal(plugin.tool, undefined)
+    assert.equal(typeof plugin.event, 'function', 'the reports must not go with the tools')
+  })
+})
+
+test('an inline config without lich in it keeps the tools', async () => {
+  for (const content of ['{"mcp":{"mine":{}}}', '{"model":"m"}', 'not json']) {
+    await withEnv({ ...INSIDE_LICH, OPENCODE_CONFIG_CONTENT: content }, async () => {
+      const plugin = await LichPlugin({ $: fakeShell().$ }, fakeHelper())
+      assert.ok(plugin.tool?.list_sessions, `${content}: tools dropped`)
+    })
+  }
+})
+
 test('the lich a session belongs to is the one that runs', async () => {
   const shell = fakeShell({ stdout: '[]' })
   await inLich(shell, async (tools) => {
