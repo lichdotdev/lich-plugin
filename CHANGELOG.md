@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.8] - 2026-10-27
+
 ### Changed
 
 - **opencode leaves lich's operations to lich's MCP server.** A lich that hands
@@ -25,7 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **An omp card no longer shows omp's title card.** omp heads a generated title
   with an icon and a code (`󰧿 LIGHT: Write lighthouse fog haiku`), and the card
   showed all of it. The title is sent without them.
-
 - **A lich worker answers its errand when its `classic.Stop` hook is
   bypassed.** On a machine with managed settings, Claude Code's builtin
   `cc-plugin-sec-default` sends `classic.Stop` on past user plugins, and the
@@ -844,7 +845,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   plugin is safe to install globally. Requests time out after ~1s and errors
   are swallowed — the hook never blocks or fails the turn.
 
-[Unreleased]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.7...HEAD
+[Unreleased]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.8...HEAD
+[0.20.8]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.7...v0.20.8
 [0.20.7]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.6...v0.20.7
 [0.20.6]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.5...v0.20.6
 [0.20.5]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.4...v0.20.5
