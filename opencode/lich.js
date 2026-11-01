@@ -470,10 +470,10 @@ async function lichTools($, helper) {
   }
 }
 
-// The one export, and it has to stay the one: opencode calls every export of a
-// plugin module with a plugin input and reads hook keys off what comes back.
-// helper is the suite's seam for the tool package — opencode passes one
-// argument, so the second is invisible to it.
+// The 1.x plugin, and the only named export: opencode 1.x calls every named
+// export of a plugin module with a plugin input and reads hook keys off what
+// comes back. helper is the suite's seam for the tool package; opencode passes
+// one argument, so the second is invisible to it.
 export const LichPlugin = async ({ $ } = {}, helper) => {
   // A sub-session (the `task` tool) reports its own status and would answer for
   // the card: its `idle` is a sub-agent finishing, not the turn ending. They are
@@ -565,3 +565,84 @@ export const LichPlugin = async ({ $ } = {}, helper) => {
     ...(tools ? { tool: tools } : {}),
   }
 }
+
+// opencode 2 moved every report to new names and loads a plugin through a
+// different door: the default export's `setup(ctx)`, with events read off
+// `ctx.event.subscribe` and tool calls off `ctx.tool.hook` (measured on 2.2.5).
+// 1.x (1.18.23 and 1.19.4) reads the same default export's `server()` and runs
+// LichPlugin once through it; it also calls `setup()`, with a context missing
+// both of those, which is how the 2.x half tells it is not running under 2.x.
+//
+// A sub-session (the `subagent` tool) carries no parent on its events, only on
+// its own record, so each session is looked up once and remembered.
+const MUTATING_TOOLS = new Set(["write", "edit", "patch"])
+// How a 2.x run ends: the three words its binary spells beside `started`.
+const RUN_ENDED = new Set(["session.execution.succeeded", "session.execution.failed", "session.execution.interrupted"])
+
+function opencode2Session(ctx) {
+  const known = new Map()
+  const started = new Set()
+  const isSub = async (id) => {
+    if (!known.has(id)) {
+      let parentID
+      try {
+        parentID = (await ctx.session.get({ sessionID: id }))?.parentID
+      } catch {}
+      known.set(id, typeof parentID === "string" && parentID !== "")
+    }
+    return known.get(id)
+  }
+  const fromRoot = (id, fn) => {
+    if (typeof id !== "string" || id === "") return
+    isSub(id).then((sub) => sub || fn()).catch(() => {})
+  }
+  const onEvent = (event) => {
+    const data = event?.data ?? {}
+    const id = data.sessionID
+    const type = typeof event?.type === "string" ? event.type : ""
+    if (type === "session.execution.started") {
+      fromRoot(id, () => {
+        if (!started.has(id)) {
+          started.add(id)
+          report("session-start", { provider_session_id: id, provider: "opencode" })
+        }
+        report("hook", { state: "busy", ...conversation(id) })
+      })
+    } else if (RUN_ENDED.has(type)) {
+      fromRoot(id, () => report("hook", { state: "done", ...conversation(id) }))
+    } else if (type === "session.renamed") {
+      const title = typeof data.title === "string" ? data.title.trim() : ""
+      if (title) fromRoot(id, () => report("session-title", { title }))
+    } else if (type.endsWith(".asked")) {
+      fromRoot(id, () => report("hook", { state: "waiting", reason: reasonOf(data), ...conversation(id) }))
+    }
+  }
+  return { onEvent, fromRoot }
+}
+
+async function setup(ctx) {
+  if (typeof ctx?.event?.subscribe !== "function" || typeof ctx?.session?.get !== "function") return
+  if (!process.env.LICH_PORT || !process.env.LICH_TOKEN || !process.env.LICH_SESSION_ID) return
+  const session = opencode2Session(ctx)
+  try {
+    await ctx.tool?.hook?.("execute.before", (call) => {
+      session.fromRoot(call?.sessionID, () =>
+        report("hook", { state: "busy", tool: call.tool, detail: detailOf(call.input), ...conversation(call.sessionID) }),
+      )
+    })
+    await ctx.tool?.hook?.("execute.after", (call) => {
+      if (MUTATING_TOOLS.has(call?.tool) && call?.status === "completed") {
+        session.fromRoot(call.sessionID, () => report("session-touched", {}))
+      }
+    })
+  } catch {}
+  const controller = new AbortController()
+  void (async () => {
+    try {
+      for await (const event of ctx.event.subscribe({ signal: controller.signal })) session.onEvent(event)
+    } catch {}
+  })()
+  return () => controller.abort()
+}
+
+export default { id: "lich", setup, server: (input) => LichPlugin(input) }
