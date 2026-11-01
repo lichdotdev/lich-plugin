@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The opencode module reports from opencode 2.** opencode 2 loads plugins
+  through a new door and renamed every event the card reads, so under it a card
+  had no spinner, ring, bell or title. The same `opencode/lich.js` now carries
+  both: opencode 1 runs it as before, opencode 2 through its default export.
+  opencode 2 reads plugins from `~/.config/opencode/plugins/` only, which is
+  where a lich that knows opencode 2 installs it (`docs/providers.md`).
+
 ## [0.20.8] - 2026-10-27
 
 ### Changed

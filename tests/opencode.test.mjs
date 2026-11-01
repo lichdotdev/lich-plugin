@@ -464,8 +464,10 @@ test('every export is a plugin opencode can load, outside lich', async () => {
   const previous = { ...process.env }
   for (const key of Object.keys(process.env)) if (key.startsWith('LICH_')) delete process.env[key]
   try {
-    const names = Object.keys(module)
-    assert.deepEqual(names, ['LichPlugin'], 'a second export is a second plugin opencode will call')
+    // The default export is opencode 2's door (opencode2.test.mjs); 1.x reads
+    // it through its server(), which is LichPlugin, so it is not a second plugin.
+    const names = Object.keys(module).filter((name) => name !== 'default')
+    assert.deepEqual(names, ['LichPlugin'], 'a second named export is a second plugin opencode will call')
 
     for (const name of names) {
       const exported = module[name]

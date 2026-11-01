@@ -156,10 +156,15 @@ waits.
 ## opencode specifics
 
 - **It is a module, not a command.** `opencode/lich.js` goes in opencode's
-  plugin directory — `~/.config/opencode/plugin/` globally, `.opencode/plugin/`
-  per project (`plugins/` works too; opencode globs both). There is no
-  marketplace to install from and no manifest: the file being there is the
-  install.
+  plugin directory, `~/.config/opencode/plugins/` globally and
+  `.opencode/plugins/` per project: opencode 2 reads only `plugins/`, and 1.x
+  globs it beside `plugin/`. There is no marketplace to install from and no
+  manifest: the file being there is the install.
+- **One module, both generations.** opencode 1.x calls the named `LichPlugin`
+  through the default export's `server()` (1.18.23 and 1.19.4 run it once);
+  opencode 2 reads the same default export's `id` and `setup(ctx)` (measured on
+  2.2.5). 1.x calls `setup()` too, with a context that has neither `event` nor
+  `session`, which is how the 2.x half knows to stand down.
 - **One module, one card.** The plugin is loaded by the opencode *server* and
   reads `LICH_SESSION_ID` from the environment it was started in. A session lich
   spawns gets its own server, so that is one card; a server shared between two
@@ -175,6 +180,15 @@ waits.
   session including its title. The one at creation is a placeholder built from
   the timestamp, so the module holds it and only reports a title that differs
   from it — no matching on its wording.
+- **opencode 2 reports under other names.** Session start and busy ride
+  `session.execution.started`, done rides `session.execution.succeeded`,
+  `failed` and `interrupted`, the title `session.renamed`, waiting
+  `permission.asked` (its `action` is the reason), the tool line
+  `ctx.tool.hook("execute.before")`, and touched the `write`, `edit` and `patch`
+  tools finishing. No 2.x event carries a parent, so a sub-session is told apart
+  by looking it up once with `ctx.session.get`. The question tool's event was
+  never seen: a non-interactive run does not ask one, so `.asked` stays the rule.
+  Under 2.x the module defines no tools: lich hands 2.x its MCP server.
 - **Never awaited.** opencode awaits its plugin hooks, so a report that blocked
   would sit in front of the agent's next step. Every `fetch` here is fired and
   dropped, with a 1s timeout, and its failure is swallowed — the module's version
