@@ -76,7 +76,7 @@ Each doc carries the event mapping for **every** provider, one column each — a
 
 ## Skills
 
-- [skills/theme](skills/theme/SKILL.md) — writing, porting and validating lich color themes, as a single file or as a versioned theme repository. Mirrors the theme contract in the lich repository (`docs/themes.md` there); `template.json` is a copy of the starter lich itself hands out, vendored at `tests/lich-ref` by `tests/refresh-fixtures.sh` and diffed by CI like the fixtures, and `validate.mjs` derives its token sets from that copy. A change to the theme shape, or to the repository contract, lands here too.
+- [skills/theme](skills/theme/SKILL.md) — writing, porting and validating lich color themes, as a single file or as a versioned theme repository. Mirrors the theme contract in the lich repository (`docs/themes.md` there); `template.json` is a copy of the starter lich itself hands out, vendored at `tests/lich-ref` by `tests/refresh-fixtures.sh` and diffed by CI like the fixtures, and `validate.mjs` derives its token sets from that copy. A change to the theme shape, or to the repository contract, lands here too. The harnesses that read no skills out of a plugin (opencode, oh-my-pi, Crush, Kiro CLI) get the skill from lich's install, which fetches `SKILL.md`, `template.json` and `validate.mjs` from the release tag and rewrites the `name: theme` frontmatter line to `name: lich-theme` (`internal/agentplugin/skill.go` in the lich repository): adding, renaming or moving a file the skill needs, or renaming the skill, means changing that list in lich first.
 
 ## Tests
 

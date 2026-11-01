@@ -44,7 +44,7 @@ such as `/compact`, the session runs it on itself once its turn ends
 
 It also ships skills for the parts of lich you configure from inside a session:
 
-- **theme** (`/lich:theme` in Claude Code; on Codex and Antigravity the `theme` skill loads from its description) — write, port or fix a lich color theme: the app tokens, the xterm palette, where the file goes, and a validator for the rules that otherwise fail silently
+- **theme** (`/lich:theme` in Claude Code; on Codex and Antigravity the `theme` skill loads from its description; Cursor CLI loads it from the Claude Code install; lich copies it as `lich-theme` into opencode, where it is `/lich-theme`, oh-my-pi, Crush and Kiro CLI when it installs the plugin there): write, port or fix a lich color theme: the app tokens, the xterm palette, where the file goes, and a validator for the rules that otherwise fail silently
 
 ## Structure
 
