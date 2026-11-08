@@ -77,14 +77,24 @@ body=$(jq -cn --arg sid "$LICH_SESSION_ID" --arg title "$title" \
 
 # -f so a refusal counts as one: a title lich did not take is one worth looking
 # for again on the next tool call, where latching on it would wait for Stop.
-if curl -sf -o /dev/null --max-time 1 \
-  -X POST "http://127.0.0.1:${LICH_PORT}/session-title?token=${LICH_TOKEN}" \
+#
+# The token rides a header fed through stdin (printf is a builtin): a query
+# string or -H would put it in curl's command line, which every user on the
+# machine can read. A lich older than the header answers 401, and only then is
+# the report sent the old way.
+url="http://127.0.0.1:${LICH_PORT}/session-title"
+set -- -sf -o /dev/null --max-time 1 -X POST \
   -H 'Content-Type: application/json' \
   -H "X-Lich-Plugin: ${plugin_version}" \
   -d "$body"
-then
-  [ -n "$latch" ] && : >"$latch" 2>/dev/null
+answer=$(printf 'header = "Authorization: Bearer %s"\n' "$LICH_TOKEN" |
+  curl "$@" -w '%{http_code}' -K - "$url")
+took=$?
+if [ "$answer" = 401 ]; then
+  curl "$@" "$url?token=${LICH_TOKEN}"
+  took=$?
 fi
+[ "$took" -eq 0 ] && [ -n "$latch" ] && : >"$latch" 2>/dev/null
 
 # Never blocks or fails the turn.
 exit 0

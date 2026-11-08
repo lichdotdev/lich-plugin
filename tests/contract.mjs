@@ -195,12 +195,17 @@ export function matchingAcceptCase(endpoint, body) {
 const ANY_SHAPE = { '/hook': ['provider_session_id'] }
 
 export function assertContractHonoured(endpoint, request) {
-  assert.equal(request.method, 'POST')
   assert.equal(
     request.url,
     `${endpoint}?token=${TOKEN}`,
     `posted to ${request.url}, expected ${endpoint}?token=${TOKEN}`,
   )
+  return assertReportHonoured(endpoint, request)
+}
+
+/** Everything a report owes the contract except how its token travels. */
+export function assertReportHonoured(endpoint, request) {
+  assert.equal(request.method, 'POST')
   assert.match(request.headers['content-type'] ?? '', /application\/json/)
   assert.equal(
     request.headers['x-lich-plugin'],
@@ -240,6 +245,7 @@ const liveStubs = new Set()
  */
 export const settleStubs = () => Promise.all([...liveStubs].map((stub) => stub.settle()))
 
+/** `status` is the answer to every request, or a function of the request. */
 export async function startStub({ status = 204 } = {}) {
   const requests = []
   const sockets = new Set()
@@ -251,7 +257,7 @@ export async function startStub({ status = 204 } = {}) {
     })
     req.on('end', () => {
       requests.push({ method: req.method, url: req.url, headers: req.headers, raw })
-      res.writeHead(status).end()
+      res.writeHead(typeof status === 'function' ? status(req) : status).end()
     })
   })
   server.on('connection', (socket) => {
