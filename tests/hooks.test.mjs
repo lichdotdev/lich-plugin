@@ -24,6 +24,7 @@ import {
   STATES,
   TOKEN,
   assertContractHonoured,
+  assertReportHonoured,
   lichEnv,
   rejected,
   settleStubs,
@@ -94,6 +95,15 @@ function runHook(command, { env = {}, stdin = '', pluginRoot = true, tmpdir = nu
 function assertHookSucceeded(result, stdout = '') {
   assert.equal(result.code, 0, `exited ${result.code}: ${result.stderr}`)
   assert.equal(result.stdout, stdout, `stdout was ${JSON.stringify(result.stdout)}`)
+}
+
+// A script's token rides a header and stays out of the URL: the URL is an
+// argument of curl, and a process's arguments are readable by every user on the
+// machine. The in-process clients keep `?token=`, which no process is handed.
+function assertHookHonoured(endpoint, request) {
+  assert.equal(request.url, endpoint, `posted to ${request.url}, expected ${endpoint} with no token in it`)
+  assert.equal(request.headers.authorization, `Bearer ${TOKEN}`)
+  return assertReportHonoured(endpoint, request)
 }
 
 // ------------------------------------------------------------ registrations --
@@ -609,7 +619,7 @@ for (const registration of REGISTRATIONS) {
       assertHookSucceeded(result, registration.stdout ?? '')
       assert.equal(stub.requests.length, 1, `sent ${stub.requests.length} requests, expected 1`)
 
-      const { body } = assertContractHonoured(endpoint, stub.requests[0])
+      const { body } = assertHookHonoured(endpoint, stub.requests[0])
       assert.equal(body.session_id, LICH_SESSION_ID)
       if (script === 'report-state.sh') {
         assert.equal(body.state, argument)
@@ -643,7 +653,7 @@ test('session-start falls back to claude when the registration passes no provide
       stdin: stdinFor({ provider: 'claude', event: 'SessionStart' }),
     })
     assertHookSucceeded(result)
-    const { body } = assertContractHonoured('/session-start', stub.requests[0])
+    const { body } = assertHookHonoured('/session-start', stub.requests[0])
     assert.equal(body.provider, 'claude')
   })
 })
@@ -666,7 +676,7 @@ for (const [label, payload] of NO_REASON) {
       })
       assertHookSucceeded(result)
       assert.equal(stub.requests.length, 1, 'a reason it could not build cost the report')
-      const { body } = assertContractHonoured('/hook', stub.requests[0])
+      const { body } = assertHookHonoured('/hook', stub.requests[0])
       assert.equal(body.state, 'waiting')
       assert.ok(!('reason' in body), `sent a reason it has no words for: ${stub.requests[0].raw}`)
     })
@@ -683,7 +693,7 @@ test('waiting reports the tool name as its reason without jq', async () => {
       stdin: stdinFor({ provider: 'codex', event: 'PermissionRequest' }),
     })
     assertHookSucceeded(result)
-    const { body } = assertContractHonoured('/hook', stub.requests[0])
+    const { body } = assertHookHonoured('/hook', stub.requests[0])
     assert.equal(body.reason, TOOL_CALL.codex.tool_name)
   })
 })
@@ -695,7 +705,7 @@ test('waiting sends no message-shaped reason without jq', async () => {
       stdin: stdinFor({ provider: 'claude', event: 'Notification' }),
     })
     assertHookSucceeded(result)
-    const { body } = assertContractHonoured('/hook', stub.requests[0])
+    const { body } = assertHookHonoured('/hook', stub.requests[0])
     assert.equal(body.state, 'waiting')
     assert.ok(!('reason' in body), `escaped nothing and sent it anyway: ${stub.requests[0].raw}`)
   })
@@ -717,7 +727,7 @@ for (const state of ['busy', 'done', 'idle']) {
       await settleStubs()
       assert.equal(code, 0)
       assert.equal(stub.requests.length, 1)
-      assert.equal(assertContractHonoured('/hook', stub.requests[0]).body.state, state)
+      assert.equal(assertHookHonoured('/hook', stub.requests[0]).body.state, state)
     })
   })
 }
@@ -731,7 +741,7 @@ for (const [script, argument] of [['report-state.sh', 'busy'], ['report-tool.sh'
         stdin: stdinFor({ provider: 'claude', event: 'PreToolUse' }),
       })
       assertHookSucceeded(result)
-      const { body } = assertContractHonoured('/hook', stub.requests[0])
+      const { body } = assertHookHonoured('/hook', stub.requests[0])
       assert.equal(body.provider_session_id, PROVIDER_SESSION_ID.claude)
     })
   })
@@ -744,7 +754,7 @@ for (const [script, argument] of [['report-state.sh', 'busy'], ['report-tool.sh'
         stdin: JSON.stringify(payload),
       })
       assertHookSucceeded(result)
-      const { body } = assertContractHonoured('/hook', stub.requests[0])
+      const { body } = assertHookHonoured('/hook', stub.requests[0])
       assert.ok(!('provider_session_id' in body), `sent an empty conversation: ${stub.requests[0].raw}`)
     })
   })
@@ -805,7 +815,7 @@ for (const [script, argument, lost, reports] of WITHOUT_HELPER) {
       assert.equal(result.stderr, `lich-plugin: hooks/conversation-id.sh missing; ${lost}\n`)
       assert.equal(stub.requests.length, reports)
       if (reports) {
-        const { body } = assertContractHonoured('/hook', stub.requests[0])
+        const { body } = assertHookHonoured('/hook', stub.requests[0])
         assert.ok(!('provider_session_id' in body), `sent a conversation it cannot read: ${stub.requests[0].raw}`)
       }
     })
@@ -821,7 +831,7 @@ test('session-start parses the payload without jq', async () => {
     })
     assertHookSucceeded(result)
     assert.equal(stub.requests.length, 1)
-    const { body } = assertContractHonoured('/session-start', stub.requests[0])
+    const { body } = assertHookHonoured('/session-start', stub.requests[0])
     assert.equal(body.provider_session_id, PROVIDER_SESSION_ID.claude)
   })
 })
@@ -893,7 +903,7 @@ for (const [provider, make] of [
       })
       assertHookSucceeded(result)
       assert.equal(stub.requests.length, 1)
-      const { body } = assertContractHonoured('/session-title', stub.requests[0])
+      const { body } = assertHookHonoured('/session-title', stub.requests[0])
       assert.equal([...body.title].length, 80, 'title is not 80 characters')
       assert.equal(body.title, [...long].slice(0, 80).join(''))
       assert.ok(!body.title.includes('\uFFFD'), `title carries a broken character: ${body.title}`)
@@ -910,7 +920,7 @@ test('session-title reports the first line of a paginated Codex rollout', async 
     })
     assertHookSucceeded(result)
     assert.equal(stub.requests.length, 1)
-    assert.equal(assertContractHonoured('/session-title', stub.requests[0]).body.title, 'Fix the replay ring overflow')
+    assert.equal(assertHookHonoured('/session-title', stub.requests[0]).body.title, 'Fix the replay ring overflow')
   })
 })
 
@@ -922,7 +932,7 @@ test('session-title trims the title it reports', async () => {
       stdin: JSON.stringify({ session_id: 's', transcript_path: file }),
     })
     assertHookSucceeded(result)
-    const { body } = assertContractHonoured('/session-title', stub.requests[0])
+    const { body } = assertHookHonoured('/session-title', stub.requests[0])
     assert.equal(body.title, 'Fix the replay ring overflow')
   })
 })
@@ -946,7 +956,7 @@ test('session-title reported once per session stops scanning', async () => {
       })
 
     assertHookSucceeded(await run())
-    assertContractHonoured('/session-title', stub.requests[0])
+    assertHookHonoured('/session-title', stub.requests[0])
     assertHookSucceeded(await run())
     assert.equal(stub.requests.length, 1, `reported ${stub.requests.length} times, expected 1`)
   })
@@ -967,7 +977,7 @@ test('session-title without the latch reports every time, for a retitle', async 
     assertHookSucceeded(await run(first))
     assertHookSucceeded(await run(second))
     assert.equal(stub.requests.length, 2, `reported ${stub.requests.length} times, expected 2`)
-    assert.equal(assertContractHonoured('/session-title', stub.requests[1]).body.title, 'Rewrite the replay ring')
+    assert.equal(assertHookHonoured('/session-title', stub.requests[1]).body.title, 'Rewrite the replay ring')
   })
 })
 
@@ -1002,7 +1012,7 @@ test('session-title escapes a title that would break the JSON body', async () =>
       stdin: JSON.stringify({ session_id: 's', transcript_path: file }),
     })
     assertHookSucceeded(result)
-    const { body } = assertContractHonoured('/session-title', stub.requests[0])
+    const { body } = assertHookHonoured('/session-title', stub.requests[0])
     assert.equal(body.title, 'Fix "quoted" \\ and \ttabbed')
   })
 })
@@ -1043,10 +1053,10 @@ test('report-tool no-ops when the tool name is empty', async () => {
 })
 
 // The detail is optional in the contract: absent, not blank. A blank one is a
-// shape no accept case carries, which assertContractHonoured would catch.
+// shape no accept case carries, which assertHookHonoured would catch.
 test('report-tool omits the detail when the call carries nothing to say', async () => {
   const { requests } = await runToolHook({ tool_name: 'Read', tool_input: {} })
-  const { body, match } = assertContractHonoured('/hook', requests[0])
+  const { body, match } = assertHookHonoured('/hook', requests[0])
   assert.equal(match, 'a tool with nothing to say about it')
   assert.equal(body.tool, 'Read')
   assert.ok(!('detail' in body), `sent a detail anyway: ${requests[0].raw}`)
@@ -1148,7 +1158,7 @@ const DETAILS = [
 for (const [label, payload, want] of DETAILS) {
   test(`report-tool names ${label}`, async () => {
     const { requests } = await runToolHook(payload)
-    const { body } = assertContractHonoured('/hook', requests[0])
+    const { body } = assertHookHonoured('/hook', requests[0])
     assert.equal(body.state, 'busy')
     assert.equal(body.tool, payload.tool_name ?? payload.toolCall?.name)
     assert.equal(body.detail, want)
@@ -1163,7 +1173,7 @@ test('report-tool sends the tool alone when a patch names no file', async () => 
     tool_name: 'apply_patch',
     tool_input: { command: '*** Begin Patch\nmalformed' },
   })
-  const { body, match } = assertContractHonoured('/hook', requests[0])
+  const { body, match } = assertHookHonoured('/hook', requests[0])
   assert.equal(match, 'a tool with nothing to say about it')
   assert.equal(body.tool, 'apply_patch')
   assert.ok(!('detail' in body), `put a patch envelope on the card: ${requests[0].raw}`)
@@ -1172,7 +1182,7 @@ test('report-tool sends the tool alone when a patch names no file', async () => 
 test('report-tool escapes a detail that would break the JSON body', async () => {
   const command = 'grep -n "state" internal/*.go | sed \'s/\\t/ /g\''
   const { requests } = await runToolHook({ tool_name: 'Bash', tool_input: { command } })
-  const { body } = assertContractHonoured('/hook', requests[0])
+  const { body } = assertHookHonoured('/hook', requests[0])
   assert.equal(body.detail, command)
 })
 
@@ -1182,7 +1192,7 @@ test('report-tool sends one line of a multi-line command', async () => {
     tool_name: 'Bash',
     tool_input: { command: 'cat <<EOF\nfirst\nsecond\nEOF' },
   })
-  const { body } = assertContractHonoured('/hook', requests[0])
+  const { body } = assertHookHonoured('/hook', requests[0])
   assert.equal(body.detail, 'cat <<EOF')
 })
 
@@ -1193,7 +1203,7 @@ test('report-tool reports the tool alone without jq', async () => {
     { tool_name: 'Bash', tool_input: { command: 'pnpm test' } },
     { env: { PATH: binWithout('jq') } },
   )
-  const { body, match } = assertContractHonoured('/hook', requests[0])
+  const { body, match } = assertHookHonoured('/hook', requests[0])
   assert.equal(match, 'a tool with nothing to say about it')
   assert.equal(body.tool, 'Bash')
   assert.ok(!('detail' in body), `built a detail without jq: ${requests[0].raw}`)
@@ -1258,6 +1268,78 @@ for (const { script, argument, event } of EVERY_SCRIPT) {
     assertHookSucceeded(result)
   })
 }
+
+/**
+ * A PATH whose curl and printf record the arguments they were run with, one
+ * line a run, in the file returned. printf is there because the token reaches
+ * curl through it: a shell that ran one from PATH instead of its builtin would
+ * put the token in that process's arguments.
+ */
+function recordingBin() {
+  const dir = mkdtempSync(path.join(TMP, 'bin-recording-'))
+  const argv = path.join(dir, 'argv')
+  writeFileSync(argv, '')
+  for (const tool of ['curl', 'printf']) {
+    const real = spawnSync('sh', ['-c', `command -v ${tool}`], { encoding: 'utf8' }).stdout.trim()
+    writeFileSync(
+      path.join(dir, tool),
+      `#!/bin/sh\necho "${tool} $*" >>"${argv}"\nexec "${real}" "$@"\n`,
+      { mode: 0o755 },
+    )
+  }
+  return { PATH: `${dir}${path.delimiter}${process.env.PATH}`, argv }
+}
+
+// Releases of lich before the Bearer header answer 401 to a report that carries
+// its token nowhere else.
+const olderLich = { status: (req) => (req.url.includes('?token=') ? 204 : 401) }
+
+for (const { script, argument, event } of EVERY_SCRIPT) {
+  const command = `"${ROOT}/hooks/${script}" ${argument}`.trim()
+  const stdin = stdinFor({ provider: 'claude', event })
+
+  test(`${script} keeps the token out of every command line`, async () => {
+    await withStub(async (stub) => {
+      const { PATH, argv } = recordingBin()
+      assertHookSucceeded(await runHook(command, { env: { ...lichEnv(stub.port), PATH }, stdin }))
+      assert.equal(stub.requests.length, 1, `sent ${stub.requests.length} requests, expected 1`)
+      assertHookHonoured(SCRIPTS[script], stub.requests[0])
+      const ran = readFileSync(argv, 'utf8')
+      assert.match(ran, /^curl /m, 'the recording curl never ran')
+      assert.ok(!ran.includes(TOKEN), `the token was an argument of a process:\n${ran}`)
+    })
+  })
+
+  test(`${script} reports to a lich that refuses the header, the old way`, async () => {
+    await withStub(async (stub) => {
+      assertHookSucceeded(await runHook(command, { env: lichEnv(stub.port), stdin }))
+      assert.equal(stub.requests.length, 2, `sent ${stub.requests.length} requests, expected 2`)
+      const [refused, taken] = stub.requests
+      assertHookHonoured(SCRIPTS[script], refused)
+      assertContractHonoured(SCRIPTS[script], taken)
+      assert.equal(taken.raw, refused.raw)
+    }, olderLich)
+  })
+}
+
+// The latch is what stops the transcript scan, so a title an older lich took
+// the old way has to set it like any other.
+test('session-title latches on a title an older lich took', async () => {
+  await withStub(async (stub) => {
+    const scratch = mkdtempSync(path.join(TMP, 'latch-older-'))
+    const file = claudeTranscript('Fix the replay ring overflow', 'latched-older.jsonl')
+    const run = () =>
+      runHook(`"${ROOT}/hooks/report-title.sh" once`, {
+        env: lichEnv(stub.port),
+        stdin: JSON.stringify({ session_id: 's', transcript_path: file }),
+        tmpdir: scratch,
+      })
+
+    assertHookSucceeded(await run())
+    assertHookSucceeded(await run())
+    assert.equal(stub.requests.length, 2, `sent ${stub.requests.length} requests, expected 2`)
+  }, olderLich)
+})
 
 // The header every report sends is checked against the Claude Code manifest;
 // this is what holds the Codex one to the same release.

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **The session token no longer shows in a command line.** Every hook script
+  sent its report with the token in the URL it handed `curl`, and a process's
+  command line can be read by every user on the machine, so the token was there
+  to read each time a hook fired. The scripts now send it in an
+  `Authorization: Bearer` header fed to `curl` through its standard input. A
+  lich released before it accepts that header refuses the report, and only then
+  is it sent again the old way, so cards keep working under any lich; the token
+  stays out of the command line once lich is updated. Claude Code's mods and the
+  opencode and omp modules never ran a process to report and are unchanged.
+
 ## [0.20.9] - 2026-11-01
 
 ### Added

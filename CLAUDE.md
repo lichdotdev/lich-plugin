@@ -87,8 +87,10 @@ node --test tests/*.test.mjs
 [tests/hooks.test.mjs](tests/hooks.test.mjs) drives every hook script as a real
 subprocess — the command line taken from the registration each harness reads —
 against a stub HTTP server, and asserts the body it POSTs against lich's
-contract fixtures: an accepted shape, no rejected one, the right endpoint and
-`?token=`, the `X-Lich-Plugin` header naming the manifest's version, no
+contract fixtures: an accepted shape, no rejected one, the right endpoint, the
+token in an `Authorization: Bearer` header and in no process's command line
+(with the `?token=` retry a lich older than the header needs), the
+`X-Lich-Plugin` header naming the manifest's version, no
 deprecated `claude_session_id`, plus the client rules (no lich
 environment → no report, exit 0 on a 500 or a refused connection).
 [tests/opencode.test.mjs](tests/opencode.test.mjs) does the same for the
