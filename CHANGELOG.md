@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-08
+
 ### Security
 
 - **The session token no longer shows in a command line.** Every hook script
@@ -868,7 +870,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   plugin is safe to install globally. Requests time out after ~1s and errors
   are swallowed — the hook never blocks or fails the turn.
 
-[Unreleased]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.9...HEAD
+[Unreleased]: https://github.com/lichdotdev/lich-plugin/compare/v0.21.0...HEAD
+[0.21.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.9...v0.21.0
 [0.20.9]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.8...v0.20.9
 [0.20.8]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.7...v0.20.8
 [0.20.7]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.6...v0.20.7
