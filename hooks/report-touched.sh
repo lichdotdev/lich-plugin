@@ -6,7 +6,7 @@
 [ -n "$LICH_PORT" ] && [ -n "$LICH_TOKEN" ] && [ -n "$LICH_SESSION_ID" ] || exit 0
 
 # Sent as X-Lich-Plugin on every report; bumped at release (CLAUDE.md, Release).
-plugin_version=0.20.9
+plugin_version=0.21.0
 
 # The token rides a header fed through stdin (printf is a builtin): a query
 # string or -H would put it in curl's command line, which every user on the
