@@ -45,6 +45,7 @@ such as `/compact`, the session runs it on itself once its turn ends
 It also ships skills for the parts of lich you configure from inside a session:
 
 - **theme** (`/lich:theme` in Claude Code; on Codex and Antigravity the `theme` skill loads from its description; Cursor CLI loads it from the Claude Code install; lich copies it as `lich-theme` into opencode, where it is `/lich-theme`, oh-my-pi, Crush and Kiro CLI when it installs the plugin there): write, port or fix a lich color theme: the app tokens, the xterm palette, where the file goes, and a validator for the rules that otherwise fail silently
+- **extension** (`/lich:extension` in Claude Code, `$extension` on Codex, `/extension` on Antigravity; run by hand only, no agent loads it on its own; Cursor CLI loads it from the Claude Code install; opencode, oh-my-pi, Crush and Kiro CLI do not get it until lich's install ships it): write, develop and publish a lich extension: the template repository, the manifest, permissions, translations, trying it in place, `lich extension check`, a release and the catalog listing
 
 ## Structure
 
@@ -75,6 +76,7 @@ opencode/lich.js                  # opencode client: all four reports plus the s
 omp/lich.js                       # omp client: the reports, one module
 docs/                             # client-side docs, one per contract
 skills/theme/                     # theme skill: SKILL.md, template.json, validate.mjs
+skills/extension/                 # extension skill, manual only: SKILL.md, agents/openai.yaml
 tests/                            # hook payloads asserted against lich's fixtures
 ```
 
@@ -111,7 +113,7 @@ mkdir -p ~/.gemini/config/plugins
 ln -s "$PWD" ~/.gemini/config/plugins/lich
 ```
 
-That is the whole install: the hooks come from `hooks.json` beside the manifest, and the `theme` skill from `skills/`. `agy plugin validate .` checks the bundle from the clone before you link it, `agy plugin list` shows it afterwards, and `agy plugin disable lich` turns it off again.
+That is the whole install: the hooks come from `hooks.json` beside the manifest, and the `theme` and `extension` skills from `skills/` (`extension` runs only when you invoke it). `agy plugin validate .` checks the bundle from the clone before you link it, `agy plugin list` shows it afterwards, and `agy plugin disable lich` turns it off again.
 
 Without the plugin, [`hooks.json`](hooks.json) can be merged into `~/.gemini/config/hooks.json` (global) or `.agents/hooks.json` (per project) — but a hook's working directory is the folder holding the `hooks.json` that declared it, so replace each `hooks/` prefix with the absolute path to this clone.
 
