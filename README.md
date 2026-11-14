@@ -45,7 +45,7 @@ such as `/compact`, the session runs it on itself once its turn ends
 It also ships skills for the parts of lich you configure from inside a session:
 
 - **theme** (`/lich:theme` in Claude Code; on Codex and Antigravity the `theme` skill loads from its description; Cursor CLI loads it from the Claude Code install; lich copies it as `lich-theme` into opencode, where it is `/lich-theme`, oh-my-pi, Crush and Kiro CLI when it installs the plugin there): write, port or fix a lich color theme: the app tokens, the xterm palette, where the file goes, and a validator for the rules that otherwise fail silently
-- **extension** (`/lich:extension` in Claude Code, `$extension` on Codex; run by hand only, no agent loads it on its own, except on Antigravity, which has no manual-only setting and lists it to the agent like any skill; Cursor CLI loads it from the Claude Code install; opencode, oh-my-pi, Crush and Kiro CLI do not get it until lich's install ships it): write, develop and publish a lich extension: the template repository, the manifest, permissions, translations, trying it in place, `lich extension check`, a release and the catalog listing
+- **extension** (`/lich:extension` in Claude Code, `$lich:extension` on Codex; run by hand only, no agent loads it on its own, except on Antigravity and Cursor CLI, which list every skill a plugin ships to the agent; lich copies it as `lich-extension` into opencode, oh-my-pi and Crush, and leaves Kiro CLI without it): write, develop and publish a lich extension: the template repository, the manifest, permissions, translations, trying it in place, `lich extension check`, a release and the catalog listing
 
 ## Structure
 
