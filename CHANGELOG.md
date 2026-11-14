@@ -10,10 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **An `extension` skill walks you through writing a lich extension.** Run it by
-  hand (`/lich:extension` in Claude Code, `$extension` on Codex, `/extension` on
-  Antigravity) and it takes you from the template repository to a release and the
-  catalog listing, pointing at lich's docs for the tables. No agent loads it on
-  its own.
+  hand (`/lich:extension` in Claude Code, `$extension` on Codex) and it takes you
+  from the template repository to a release and the catalog listing, pointing at
+  lich's docs for the tables. No agent loads it on its own, except on Antigravity,
+  which has no way to keep a skill out of the agent's reach.
 
 ## [0.21.0] - 2026-11-08
 
