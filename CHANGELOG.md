@@ -13,7 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Agent call answers with, in every prompt language, says the worker's report
   arrives at the prompt by itself as a `<lich-notification kind="worker-finished">`,
   the envelope lich hands every note in, so there is nothing to poll or collect.
-  It no longer speaks of a `[lich]` note, which lich no longer sends.
+  It no longer speaks of a `[lich]` note, which lich no longer sends. Needs the
+  lich release after v0.92.0, the first that sends the notification envelope;
+  this release is a minor so that an older lich, still sending `[lich]` notes,
+  never installs it.
 
 ## [0.21.1] - 2026-11-13
 
