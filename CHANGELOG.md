@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-11-22
+
 ### Changed
 
 - **A subagent card's report is described as lich's envelope.** The note the
@@ -891,7 +893,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   plugin is safe to install globally. Requests time out after ~1s and errors
   are swallowed — the hook never blocks or fails the turn.
 
-[Unreleased]: https://github.com/lichdotdev/lich-plugin/compare/v0.21.1...HEAD
+[Unreleased]: https://github.com/lichdotdev/lich-plugin/compare/v0.22.0...HEAD
+[0.22.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.21.1...v0.22.0
 [0.21.1]: https://github.com/lichdotdev/lich-plugin/compare/v0.21.0...v0.21.1
 [0.21.0]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.9...v0.21.0
 [0.20.9]: https://github.com/lichdotdev/lich-plugin/compare/v0.20.8...v0.20.9
