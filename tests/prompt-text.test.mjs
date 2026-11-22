@@ -18,7 +18,7 @@ const slots = (text) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
 
 // Names the model or the contract matches on: kept literal in every locale.
 const LITERALS = [
-  '[lich]',
+  '<lich-notification kind="worker-finished">',
   'send_to_session',
   'wait_for_answer',
   'SendMessage',
@@ -106,7 +106,7 @@ test('agent-cards: the background note, the completed addendum and the denies sp
 
   const background = await call('pending')
   assert.match(background.context[0], /^O agente roda como a sessão lich "w", neste mesmo checkout, \/wt\/w/)
-  assert.match(background.context[0], /\[lich\].*wait_for_answer.*SendMessage.*send_to_session ou lich send/)
+  assert.match(background.context[0], /<lich-notification kind="worker-finished">.*wait_for_answer.*SendMessage.*send_to_session ou lich send/)
 
   const done = await call('answered')
   assert.match(done.result.content[0].text, /^feito\n\nO trabalho está neste mesmo checkout, \/wt\/w \(sessão lich "w"\)\./)

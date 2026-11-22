@@ -33,7 +33,7 @@ a lich session: a card you can watch and steer, working in the asking session's
 checkout as a native subagent does, or in a worktree of its own when the
 subagent asks for isolation. The Agent call returns at once as a background
 subagent, and the session's full report arrives at the asking session's prompt
-on its own as a `[lich]` note: the worker's last message is its report, as a native subagent's is
+on its own as a `<lich-notification kind="worker-finished">`: the worker's last message is its report, as a native subagent's is
 ([docs/mod-answer.md](docs/mod-answer.md)). Explore, Plan and other agent types stay inside Claude Code. [docs/agent-cards.md](docs/agent-cards.md) has the
 rules and what happens when lich cannot be reached. Since that subagent shares
 the checkout, an edit to a file another lich session edited in the last ten

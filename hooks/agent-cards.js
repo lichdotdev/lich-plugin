@@ -15,7 +15,8 @@
 //
 // Once lich has the task the Agent call answers at once, as a background
 // subagent does, and nothing here waits on the worker: `--subagent` makes lich
-// type the worker's whole report at this session's prompt as a [lich] note.
+// hand the worker's whole report to this session's prompt as a <lich-notification kind="worker-finished">
+// envelope.
 // While workers run, the status line counts them from `$LICH_BIN sessions
 // --json`, and Claude Code's TaskStop on one is taken here and done by lich.
 //
@@ -261,7 +262,7 @@ function answerFor(e, opened, branch, report, durationMs, lang) {
   switch (report.status) {
     // A worker whose turn ended unanswered is usually still at it: it left a
     // command running in the background and resumes when it finishes, and its
-    // report still arrives as a [lich] note.
+    // report still arrives as a <lich-notification kind="worker-finished">.
     case "pending":
     case "unanswered":
       return backgrounded(e, opened, branch, lang)

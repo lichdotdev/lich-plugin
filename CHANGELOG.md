@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **A subagent card's report is described as lich's envelope.** The note the
+  Agent call answers with, in every prompt language, says the worker's report
+  arrives at the prompt by itself as a `<lich-notification kind="worker-finished">`,
+  the envelope lich hands every note in, so there is nothing to poll or collect.
+  It no longer speaks of a `[lich]` note, which lich no longer sends.
+
 ## [0.21.1] - 2026-11-13
 
 ### Added
