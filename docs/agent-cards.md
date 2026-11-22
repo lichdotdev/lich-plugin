@@ -73,7 +73,7 @@ Nothing runs after that: the delivery `lich open` printed decides the answer.
 |-------------------------------|---------------------------------------------------------------------|
 | `pending`                     | `async_launched` at once, plus a note on how the report comes back; the worker is counted in the footer |
 | `answered`                    | `completed`: the report, then the checkout (and branch) it is on    |
-| `unanswered`                  | `async_launched`, as for `pending`: a turn that ended unanswered usually left a background command running, and the report still arrives as a [lich] note |
+| `unanswered`                  | `async_launched`, as for `pending`: a turn that ended unanswered usually left a background command running, and the report still arrives as a `<lich-notification kind="worker-finished">` |
 | `unread`, `undelivered`       | denied: the task never reached the card                             |
 | a status it does not know     | denied, naming the card and its branch                              |
 | the open failed               | the native agent runs, with a toast saying why                      |
@@ -104,8 +104,8 @@ for an isolated call.
   has the task it answers `async_launched` and the asking turn goes on. Parallel
   Agent calls run their hooks concurrently, so each opens its own card at once.
 - **The report comes back through lich, not Claude Code.** `--subagent` makes
-  lich type the worker's whole report at the asking session's prompt as a
-  `[lich]` note (through mod-control's `prompt` when the session runs the mod),
+  lich hand the worker's whole report to the asking session's prompt as a
+  `<lich-notification kind="worker-finished">` (through mod-control's `prompt` when the session runs the mod),
   so the model has nothing to collect; `wait_for_answer` and `lich wait` still
   work. Claude Code's own text for a background agent promises a task
   notification and names `SendMessage`, so the result carries a `context` line
@@ -125,7 +125,7 @@ for an isolated call.
   natively with a toast saying why, naming the card when one was opened. Esc
   while the open is still running denies the call instead, because lich may
   already have handed the task over and a native agent beside the worker would
-  do the work twice; a report that worker sends still arrives as a `[lich]` note.
+  do the work twice; a report that worker sends still arrives as a `<lich-notification kind="worker-finished">`.
 - **An isolated worker's branch is named from the call.** The description is slugged the way
   lich's own worktree dialog slugs a typed name (2 to 5 words, 10 to 40
   characters, letters and digits in any script), `agent` when nothing is left,

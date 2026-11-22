@@ -188,8 +188,8 @@ function completed(text, { durationMs = 3000, prompt = AGENT.prompt, worker = OP
 }
 
 const reportArrives =
-  'Its full report arrives at this prompt on its own as a [lich] note, not as a task notification, so there ' +
-  'is no need to call wait_for_answer (it still works). SendMessage cannot reach that session; ' +
+  'Its full report arrives at this prompt by itself as a <lich-notification kind="worker-finished">, so there is no need to poll ' +
+  'or to call wait_for_answer (it still works). SendMessage cannot reach that session; ' +
   'send_to_session or lich send can.'
 
 function backgrounded({ worker = OPENED } = {}) {
@@ -425,7 +425,7 @@ test('an isolated task still pending at the open says which branch the worker is
 
 // A worker whose turn ended before it reported is usually still working: it
 // left a command running in the background and resumes when it finishes. Its
-// report still arrives as a [lich] note, so the call is a backgrounded agent,
+// report still arrives as a <lich-notification kind="worker-finished">, so the call is a backgrounded agent,
 // never a finished one.
 test('a worker that ended its turn without reporting comes back as a backgrounded agent', async () => {
   const { answer, passed } = await delegate([exits(3, openedHere('unanswered'))])
@@ -502,12 +502,12 @@ test('an open the user interrupted is denied, never run natively', async () => {
   assert.deepEqual(passed, [])
   assert.deepEqual(mod.toasts, [])
   assert.deepEqual(answer, {
-    deny: 'interrupted; a lich session may already have the task, and a report it sends arrives here as a [lich] note.',
+    deny: 'interrupted; a lich session may already have the task, and a report it sends arrives here as a <lich-notification kind="worker-finished">.',
   })
   const isolated = interrupted()
   const onItsBranch = await delegate([onBranch('main'), isolated.run], ISOLATED, { signal: isolated.signal })
   assert.deepEqual(onItsBranch.answer, {
-    deny: `interrupted; a lich session on branch ${BRANCH} may already have the task, and a report it sends arrives here as a [lich] note.`,
+    deny: `interrupted; a lich session on branch ${BRANCH} may already have the task, and a report it sends arrives here as a <lich-notification kind="worker-finished">.`,
   })
 })
 

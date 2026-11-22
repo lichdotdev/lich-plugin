@@ -354,8 +354,9 @@ test('every command shape lich sends is applied in order and acked ok', async ()
       {
         text:
           '<task-notification>\n<status>completed</status>\n<summary>lich session "docs" finished</summary>\n' +
-          '<result>[lich] Session "docs" finished the task you handed it (ticket t1). Its report:\n\n' +
-          'If a < b && c > d, see </result>.</result>\n</task-notification>',
+          '<result><lich-notification version="1" kind="worker-finished" from="docs" session="s2" ticket="t1">\n' +
+          '<status>answered</status>\n<result>If a < b && c > d, see </result>.</result>\n</lich-notification>' +
+          '</result>\n</task-notification>',
         asUser: true,
       },
     ],
@@ -365,7 +366,10 @@ test('every command shape lich sends is applied in order and acked ok', async ()
         text:
           '<task-notification>\n<status>waiting</status>\n' +
           '<summary>lich session "a&lt;b&amp;c" is waiting on a permission prompt</summary>\n' +
-          '<result>[lich] Session "a<b&c", the subagent you opened, is waiting on a permission prompt in its card.</result>\n' +
+          '<result><lich-notification version="1" kind="worker-waiting" from="a&lt;b&amp;c" session="s3" ticket="t2">\n' +
+          '<status>waiting</status>\n' +
+          '<request>A permission prompt in its card. Its task stays open: open that card to answer it.</request>\n' +
+          '</lich-notification></result>\n' +
           '</task-notification>',
         asUser: true,
       },
