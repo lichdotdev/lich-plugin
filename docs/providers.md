@@ -253,7 +253,9 @@ listener. 17.x moves fast — re-measure before trusting a name.
   down to the stdin payload and the exit codes, so the scripts run unchanged —
   but with nothing that fires at the end of a turn, only two of the four reports
   can be honest. Crush reports its session id and refreshes git status; it shows
-  no spinner, no check, no bell, and keeps the card's own name.
+  no spinner, no check, no bell, and keeps the card's own name. Its `agent`
+  calls go through the subagent veto ([subagent-cards.md](subagent-cards.md)),
+  which needs no end of turn.
 - **`busy` is deliberately not registered.** A `busy` with no `Stop` behind it
   would pin a spinner to the card until the next turn — wrong for longer than it
   is right. The day Crush ships an end-of-turn event, `report-state.sh` and
@@ -300,8 +302,11 @@ against a stub listener — not off a name that reads plausibly.
   where `continue` refuses to let the loop end. Silence is not the neutral
   answer it is on every other harness, so the registration appends the verdict
   the event asks for — `{"decision":"allow"}` before a tool, `{"decision":""}` on
-  `Stop`, `{}` elsewhere. The scripts stay silent, because on Codex their stdout
-  would answer a permission request instead.
+  `Stop`, `{}` elsewhere. The report scripts stay silent, because on Codex their
+  stdout would answer a permission request instead. Before a tool the verdict is
+  the subagent veto's, which runs after the tool report in the same command and
+  prints `allow` for every tool but a vetoed `invoke_subagent`
+  ([subagent-cards.md](subagent-cards.md)).
 - **Payloads are camelCase** (protojson): `conversationId` is the session id,
   `workspacePaths[0]` the session's directory, `transcriptPath` the JSONL log.
   Tool calls arrive as `toolCall.name` with PascalCase arguments under

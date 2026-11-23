@@ -83,7 +83,7 @@ function runHook(command, { env = {}, stdin = '', pluginRoot = true, tmpdir = nu
   })
 }
 
-// A hook script never speaks on stdout: on Codex the session-state hook rides
+// A report script never speaks on stdout: on Codex the session-state hook rides
 // PermissionRequest, where output and a non-zero exit are an answer to the
 // request rather than an observation.
 //
@@ -91,7 +91,9 @@ function runHook(command, { env = {}, stdin = '', pluginRoot = true, tmpdir = nu
 // stdout and acts on it, and a PreToolUse handler that says nothing leaves the
 // tool call without the `decision` its contract makes required. So the verdict
 // is appended by the registration, not printed by the shared script, and what
-// arrives on stdout is exactly that verdict and nothing the script added.
+// arrives on stdout is exactly that verdict and nothing the script added. The
+// subagent veto is the one script that speaks, its stdout being the veto: on
+// Antigravity's PreToolUse it prints the verdict (ANTIGRAVITY_VETO_CHAIN).
 function assertHookSucceeded(result, stdout = '') {
   assert.equal(result.code, 0, `exited ${result.code}: ${result.stderr}`)
   assert.equal(result.stdout, stdout, `stdout was ${JSON.stringify(result.stdout)}`)
@@ -142,6 +144,7 @@ const SCRIPTS = {
 /**
  * What each harness registers. Claude Code, Codex and Antigravity carry every
  * report; Crush carries the two its single `PreToolUse` event can honour,
+ * besides the subagent veto, which is no report (subagent.test.mjs),
  * because a `busy` nothing can end would pin a spinner to a card
  * (docs/providers.md).
  */
@@ -534,9 +537,10 @@ test("Antigravity's registration reaches for no plugin root", () => {
 // Antigravity reads a JSON object off the hook's stdout and acts on it, so
 // silence is not the neutral answer it is everywhere else: `decision` is
 // required on PreToolUse, and an unanswered tool call is a turn this plugin
-// interfered with. The shared scripts stay silent — Codex reads their stdout as
+// interfered with. The report scripts stay silent — Codex reads their stdout as
 // an answer to a permission request — so the verdict belongs to the
-// registration, and every handler carries one.
+// registration, and every handler carries one; on PreToolUse it is the subagent
+// veto's, chained after the tool report.
 const ANTIGRAVITY_VERDICT = {
   // Let the tool run: this is an observation, never a gate.
   PreToolUse: '{"decision":"allow"}',

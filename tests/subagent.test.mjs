@@ -455,20 +455,27 @@ for (const harness of HARNESSES) {
 // up lets the call run. 10 seconds is the contract's wait; one client of each
 // kind waits it out, side by side.
 test('a lich that never answers lets the call run after the 10 seconds the contract waits', async () => {
-  const waited = await Promise.all(
-    ['claude', 'opencode', 'omp'].map(async (harness) => {
-      const stub = await startStub({ hang: true })
-      const started = Date.now()
-      try {
-        assert.deepEqual(await outcome(harness, callOf(harness).payload, lichEnv(stub.port)), { allow: true })
-        return [harness, Date.now() - started]
-      } finally {
-        await stub.close()
-      }
-    }),
-  )
-  for (const [harness, ms] of waited) {
-    assert.ok(ms >= 9500 && ms < 14000, `${harness} gave up after ${ms} ms`)
+  // One stub and one environment for all three: the two in-process clients
+  // read process.env, which the outer withEnv holds steady while they run.
+  const stub = await startStub({ hang: true })
+  const env = lichEnv(stub.port)
+  try {
+    const waited = await withEnv(env, () =>
+      Promise.all(
+        ['claude', 'opencode', 'omp'].map(async (harness) => {
+          const started = Date.now()
+          assert.deepEqual(await outcome(harness, callOf(harness).payload, env), { allow: true })
+          return [harness, Date.now() - started]
+        }),
+      ),
+    )
+    // A script's run also waits for the stub to have read every connection
+    // (settleStubs), the in-process clients' included, so its ceiling is looser.
+    for (const [harness, ms] of waited) {
+      assert.ok(ms >= 9500 && ms < 20000, `${harness} gave up after ${ms} ms`)
+    }
+  } finally {
+    await stub.close()
   }
 })
 

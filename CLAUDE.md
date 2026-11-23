@@ -43,7 +43,9 @@ namespaced folder: the root is the plugin directory once the clone is linked in.
 It also sets no plugin-root variable, running a hook through `sh -c` with the
 working directory set to that root, so its registration alone spells relative
 paths; and it reads a JSON verdict off the hook's stdout, so the registration
-appends one per event while the scripts stay silent. `agy plugin validate .`
+appends one per event while the report scripts stay silent. `PreToolUse` is the
+exception: there the subagent veto, chained after the tool report so a call
+gets one verdict, prints it. `agy plugin validate .`
 checks the bundle from a clone.
 
 Three harnesses do not fit the script model, each its own way. **opencode** runs
@@ -53,7 +55,7 @@ it with `--extension` into one list it `import()`s, so its "hooks" are modules
 too, and its client is `omp/lich.js`. **Crush** runs the scripts unchanged — its
 hooks are Claude Code-compatible down to the stdin payload — but has exactly one
 event, `PreToolUse`, so only the session id and the touched refresh are
-registered for it.
+registered for it, plus the subagent veto, which needs no end of turn.
 
 ## Contracts
 
