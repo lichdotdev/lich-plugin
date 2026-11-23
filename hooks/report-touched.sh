@@ -30,7 +30,7 @@ done_() {
 [ -n "$LICH_PORT" ] && [ -n "$LICH_TOKEN" ] && [ -n "$LICH_SESSION_ID" ] || done_
 
 # Sent as X-Lich-Plugin on every report; bumped at release (CLAUDE.md, Release).
-plugin_version=0.22.0
+plugin_version=0.23.0
 
 command -v jq >/dev/null 2>&1 && has_jq=1 || has_jq=
 
