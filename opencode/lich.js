@@ -2,11 +2,12 @@
 // https://github.com/lichdotdev/lich/tree/main/docs/hooks
 //
 // opencode loads a module rather than running a script, so this one file plays
-// the part the four hooks/*.sh scripts play on the other harnesses. Same
-// transport, same payloads, same rule: outside lich it is a no-op, and it never
-// blocks or fails the user's turn.
+// the part the hooks/*.sh scripts play on the other harnesses. Same transport,
+// same payloads, same rule: outside lich it is a no-op, and it never fails the
+// user's turn. It blocks in one place, a `task` call waiting on lich's veto
+// (vetoReason, below), because there the answer is the decision.
 
-// Fire and forget. Nothing here is awaited: opencode awaits its hooks, so a
+// Fire and forget. No report is awaited: opencode awaits its hooks, so a
 // slow or dead listener would sit in front of the agent's next step. The
 // environment is read per report rather than at import, so a module loaded
 // outside lich stays a no-op instead of a cached decision.
@@ -26,6 +27,57 @@ function report(path, body) {
       signal: AbortSignal.timeout(1000),
     }).catch(() => {})
   } catch {}
+}
+
+// The one request this module awaits: lich's answer decides whether a `task`
+// call runs (docs/subagent-cards.md), so the call waits for it, 10 seconds at
+// most. Every way of not getting a deny (no lich, an error, a timeout, a status
+// other than 200, a body that is not a decision) resolves to undefined, which
+// lets the call run. A deny resolves to lich's reason, untouched.
+const VETO_WAIT_MS = 10000
+
+async function vetoReason(body) {
+  const port = process.env.LICH_PORT
+  const token = process.env.LICH_TOKEN
+  const session = process.env.LICH_SESSION_ID
+  if (!port || !token || !session) return undefined
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/subagent?token=${token}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-lich-plugin": PLUGIN_VERSION },
+      body: JSON.stringify({ session_id: session, ...body }),
+      signal: AbortSignal.timeout(VETO_WAIT_MS),
+    })
+    if (res.status !== 200) return undefined
+    const answer = await res.json()
+    return answer?.decision === "deny" && typeof answer.reason === "string" && answer.reason !== ""
+      ? answer.reason
+      : undefined
+  } catch {
+    return undefined
+  }
+}
+
+const text = (value) => (typeof value === "string" ? value : "")
+
+// The `task` call as lich's /subagent body, or undefined when lich would refuse
+// it for want of a prompt, which leaves it native without asking. Field names
+// are the contract's table (Event → veto mapping), measured on 1.19.4 there.
+function subagentBody(input, args, nested) {
+  const prompt = text(args?.prompt)
+  if (prompt.trim() === "") return undefined
+  return {
+    provider_session_id: text(input.sessionID),
+    nested,
+    call: "spawn",
+    tool: input.tool,
+    tool_use_id: text(input.callID),
+    tasks: [{ title: text(args?.description), prompt, type: text(args?.subagent_type) }],
+    model: "",
+    sealed: false,
+    isolation: "",
+    background: false,
+  }
 }
 
 // The conversation a state report comes from, so lich can drop one from an
@@ -548,16 +600,25 @@ export const LichPlugin = async ({ $ } = {}, helper) => {
       }
     },
 
-    // The tool line on the card. `file.edited` above already covers the touched
-    // report, so this one only decorates the state.
+    // The tool line on the card, and lich's say on a `task` call. `file.edited`
+    // above already covers the touched report. A sub-session's `task` is still
+    // asked about, as nested, and lich leaves it native. A deny is thrown: that
+    // is how opencode refuses a call, and the model reads the message.
     "tool.execute.before": async (input, output) => {
-      if (!input?.tool || subSessions.has(input.sessionID)) return
-      report("hook", {
-        state: "busy",
-        tool: input.tool,
-        detail: detailOf(output?.args),
-        ...conversation(input.sessionID),
-      })
+      if (!input?.tool) return
+      const nested = subSessions.has(input.sessionID)
+      if (!nested) {
+        report("hook", {
+          state: "busy",
+          tool: input.tool,
+          detail: detailOf(output?.args),
+          ...conversation(input.sessionID),
+        })
+      }
+      if (input.tool !== "task") return
+      const body = subagentBody(input, output?.args, nested)
+      const reason = body && (await vetoReason(body))
+      if (reason) throw new Error(reason)
     },
 
     // Absent outside lich, and absent when the helper cannot be imported: the

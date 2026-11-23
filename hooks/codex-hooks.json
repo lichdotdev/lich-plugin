@@ -34,6 +34,17 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "spawn_agent|collaborationspawn_agent|collaborationwait_agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/veto-subagent.sh\" codex",
+            "commandWindows": "\"${CLAUDE_PLUGIN_ROOT}/hooks/win-veto.cmd\" \"${CLAUDE_PLUGIN_ROOT}/hooks/veto-subagent.sh\" codex",
+            "timeout": 15
+          }
+        ]
       }
     ],
     "PostToolUse": [

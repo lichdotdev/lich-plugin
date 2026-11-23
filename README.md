@@ -6,8 +6,9 @@ The agent side of the [lich](https://github.com/lichdotdev/lich) integration. li
 - **session start** — persists the agent's session id on the lich session (`SessionStart`/`PreInvocation`)
 - **session title** — names the card after the session's own title (`Stop`)
 - **session touched** — refreshes the card's git status right after file-mutating tools (`PostToolUse`)
+- **subagent cards** — turns the agent's own subagent call into a lich session, asking lich before the tool runs (`PreToolUse`, or the module's pre-tool event)
 
-The four are what Claude Code, Codex, Antigravity, opencode and omp report. **Crush reports two of them** — its session id and the git-status refresh — because `PreToolUse` is the only event it has, and a state nothing can end is worse on a card than no state. **omp reports all four minus the bell**: no event of its own for "your turn" has been measured yet, so its card shows a spinner while the agent waits on you. [docs/providers.md](docs/providers.md) has the event mapping per harness.
+The four reports are what Claude Code, Codex, Antigravity, opencode and omp send. **Crush reports two of them** — its session id and the git-status refresh — because `PreToolUse` is the only event it has, and a state nothing can end is worse on a card than no state. **omp reports all four minus the bell**: no event of its own for "your turn" has been measured yet, so its card shows a spinner while the agent waits on you. [docs/providers.md](docs/providers.md) has the event mapping per harness.
 
 On **opencode** under a lich from before it registered its MCP server there, it
 also carries the other direction: the operations lich offers a session for
@@ -28,15 +29,16 @@ refuses its session, naming what to fix.
 [docs/mod-control.md](docs/mod-control.md) has what it does and which releases
 run it. No other harness has a mod system, so none of them gets the controls.
 
-The same mod system turns a **general-purpose subagent** Claude Code starts into
-a lich session: a card you can watch and steer, working in the asking session's
-checkout as a native subagent does, or in a worktree of its own when the
-subagent asks for isolation. The Agent call returns at once as a background
-subagent, and the session's full report arrives at the asking session's prompt
-on its own as a `<lich-notification kind="worker-finished">`: the worker's last message is its report, as a native subagent's is
-([docs/mod-answer.md](docs/mod-answer.md)). Explore, Plan and other agent types stay inside Claude Code. [docs/agent-cards.md](docs/agent-cards.md) has the
-rules and what happens when lich cannot be reached. Since that subagent shares
-the checkout, an edit to a file another lich session edited in the last ten
+On every harness here but opencode 2, and on Kiro CLI through lich's own
+registration, the agent's **subagent call** becomes a lich session: before the
+tool runs, the plugin asks lich, which opens the task as a card you can watch
+and steer and refuses the native call with a reason the model reads. The card's
+report arrives at the asking session's prompt on its own as a
+`<lich-notification kind="worker-finished">`. Which subagent types stay native,
+such as the read-only explorers, is lich's call, and when lich cannot be reached
+the native subagent runs. [docs/subagent-cards.md](docs/subagent-cards.md) has
+the veto per harness. Since a card shares the checkout unless the call asked
+for a worktree, an edit to a file another lich session edited in the last ten
 minutes tells the model which session it was and how to reach it
 ([docs/edit-guard.md](docs/edit-guard.md)). Asked to run a built-in slash command
 such as `/compact`, the session runs it on itself once its turn ends
@@ -64,16 +66,15 @@ hooks/report-tool.sh              # session-state hook: the tool a turn is runni
 hooks/report-session-start.sh     # session-start hook
 hooks/report-title.sh             # session-title hook
 hooks/report-touched.sh           # session-touched hook
-hooks/lich.js                     # the Claude Code mods' entry, which registers the seven below
+hooks/veto-subagent.sh            # subagent-cards hook: lich's veto on a subagent call
+hooks/lich.js                     # the Claude Code mods' entry, which registers the five below
 hooks/mod-control.js              # mod-control client, a Claude Code mod
-hooks/agent-cards.js              # a general-purpose subagent as a lich session, a Claude Code mod
 hooks/mod-usage.js                # mod-usage client, a Claude Code mod
 hooks/edit-guard.js               # names the other lich session that edited a file, a Claude Code mod
-hooks/worker-answer.js            # mod-answer client: a lich worker's last message answers its task, a Claude Code mod
 hooks/mod-status.js               # mod-status client: the session's errands in the prompt footer, a Claude Code mod
 hooks/self-command.js             # runs a built-in slash command the user asked the session for, a Claude Code mod
-opencode/lich.js                  # opencode client: all four reports plus the seven tools, one module
-omp/lich.js                       # omp client: the reports, one module
+opencode/lich.js                  # opencode client: all four reports, the subagent veto and the seven tools, one module
+omp/lich.js                       # omp client: the reports and the subagent veto, one module
 docs/                             # client-side docs, one per contract
 skills/theme/                     # theme skill: SKILL.md, template.json, validate.mjs
 skills/extension/                 # extension skill, manual only: SKILL.md, agents/openai.yaml

@@ -29,6 +29,16 @@
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/report-tool.sh\""
           }
         ]
+      },
+      {
+        "matcher": "Agent|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/veto-subagent.sh\" claude",
+            "timeout": 15
+          }
+        ]
       }
     ],
     "PostToolUse": [

@@ -174,11 +174,28 @@ const eventsIn = (json) => json.hooks ?? json.lich
  * off here, so every assertion below stays about the report the script sent.
  */
 function splitVerdict(command) {
+  const chained = command.match(ANTIGRAVITY_VETO_CHAIN)
+  if (chained) return { report: chained[1], stdout: chained[2] }
   const m = command.match(/;\s*printf\s+'(.*)'\s*$/)
   return m
     ? { report: command.slice(0, m.index), stdout: m[1] }
     : { report: command, stdout: '' }
 }
+
+/**
+ * Antigravity's `PreToolUse` runs the tool report and the subagent veto as one
+ * command, so the tool call gets one verdict: how it would merge two is not
+ * measured. Both read the one payload, which the command keeps in a variable.
+ * The verdict is the veto's: for a call that starts no subagent it answers the
+ * allow the fallback spells, which is the stdout asserted here. The veto has
+ * its own suite (subagent.test.mjs).
+ */
+const ANTIGRAVITY_VETO_CHAIN =
+  /^payload=\$\(cat\); printf '%s' "\$payload" \| (hooks\/[a-z-]+\.sh); printf '%s' "\$payload" \| hooks\/veto-subagent\.sh antigravity \|\| printf '(.*)'$/
+
+/** The subagent veto is no report: subagent.test.mjs runs its registrations. */
+const VETO_SCRIPT = 'veto-subagent.sh'
+
 
 function registrations() {
   const out = []
@@ -189,6 +206,7 @@ function registrations() {
     for (const [event, groups] of Object.entries(events)) {
       for (const group of groups) {
         for (const hook of hooksIn(group)) {
+          if (hook.command.includes(VETO_SCRIPT) && !ANTIGRAVITY_VETO_CHAIN.test(hook.command)) continue
           const script = Object.keys(SCRIPTS).find((s) => hook.command.includes(s))
           assert.ok(script, `unknown script in ${file}: ${hook.command}`)
           const command = hook.command.split(PLUGIN_ROOT_PLACEHOLDER).join(SPACED_ROOT)
@@ -201,6 +219,7 @@ function registrations() {
             command,
             pluginRoot,
             stdout,
+            report,
             script,
             endpoint: SCRIPTS[script],
             argument: report.trim().split(/\s+/).slice(1).join(' '),
@@ -480,9 +499,12 @@ test("Codex's registration runs every hook through the wrapper on Windows", () =
   assert.ok(hooks.length > 0)
   for (const hook of hooks) {
     assert.ok(hook.commandWindows, `no commandWindows for ${hook.command}`)
+    // The veto's answer is on stdout, which win-run.cmd drops: win-veto.cmd
+    // keeps it.
+    const wrapper = hook.command.includes(VETO_SCRIPT) ? 'win-veto.cmd' : 'win-run.cmd'
     assert.equal(
       hook.commandWindows,
-      `"\${CLAUDE_PLUGIN_ROOT}/hooks/win-run.cmd" ${hook.command}`,
+      `"\${CLAUDE_PLUGIN_ROOT}/hooks/${wrapper}" ${hook.command}`,
       `commandWindows must wrap the command unchanged: ${hook.command}`,
     )
   }
@@ -502,7 +524,7 @@ test("Antigravity's registration reaches for no plugin root", () => {
   )
   for (const r of REGISTRATIONS.filter((r) => r.provider === 'antigravity')) {
     assert.match(
-      r.command,
+      r.report,
       /^hooks\/[a-z-]+\.sh\b/,
       `command must be relative to the plugin root: ${r.command}`,
     )

@@ -23,8 +23,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "hooks/report-tool.sh; printf '{\"decision\":\"allow\"}'",
-            "timeout": 5
+            "command": "payload=$(cat); printf '%s' \"$payload\" | hooks/report-tool.sh; printf '%s' \"$payload\" | hooks/veto-subagent.sh antigravity || printf '{\"decision\":\"allow\"}'",
+            "timeout": 15
           }
         ]
       }

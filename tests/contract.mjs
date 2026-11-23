@@ -39,7 +39,7 @@ export const FIXTURE_OF = {
   '/session-touched': 'session-touched',
   '/mod/acks': 'mod-control',
   '/mod/usage': 'mod-usage',
-  '/mod/answer': 'mod-answer',
+  '/subagent': 'subagent-cards',
 }
 
 const readFixture = (name) =>
@@ -60,7 +60,7 @@ export const rejected = (endpoint) => CASES[endpoint].filter((c) => c.reject)
 export const STATES = new Set(accepted('/hook').map((c) => c.accept.state))
 export const PROVIDERS = new Set(accepted('/session-start').map((c) => c.accept.provider))
 export const MOD_KINDS = new Set(accepted('/mod/acks').map((c) => c.body.kind))
-export const UNANSWERED = new Set(accepted('/mod/answer').flatMap((c) => c.body.unanswered ?? []))
+export const SUBAGENT_CALLS = new Set(accepted('/subagent').map((c) => c.body.call).filter(Boolean))
 
 /**
  * Providers this plugin already reports for, and lich does not accept yet.
@@ -135,14 +135,15 @@ export const REJECT_RULES = {
     'negative cost': (b) => b.cost_usd < 0,
     'malformed json': (b, raw) => !isJsonObject(raw),
   },
-  '/mod/answer': {
-    'missing session_id': (b) => !('session_id' in b),
-    'neither text nor unanswered': (b) => !('text' in b) && !('unanswered' in b),
-    'text and unanswered together': (b) => 'text' in b && 'unanswered' in b,
-    'an aborted turn is not reported': (b) => 'unanswered' in b && !UNANSWERED.has(b.unanswered),
-    'blank text': (b) => typeof b.text === 'string' && b.text.trim() === '',
-    'text is not a string': (b) => 'text' in b && typeof b.text !== 'string',
-    'malformed json': (b, raw) => !isJsonObject(raw),
+  '/subagent': {
+    'no tasks on a spawn': (b) => (b.call ?? 'spawn') === 'spawn' && (b.tasks ?? []).length === 0,
+    'a task with no prompt': (b) => b.sealed !== true && (b.tasks ?? []).some((t) => blank(t.prompt)),
+    'a wait carrying tasks': (b) => b.call === 'wait' && (b.tasks ?? []).length > 0,
+    'an unknown call': (b) => 'call' in b && !SUBAGENT_CALLS.has(b.call),
+    'an unknown isolation': (b) => typeof b.isolation === 'string' && !['', 'worktree'].includes(b.isolation.trim()),
+    'no session id': (b) => !('session_id' in b),
+    'no tool': (b) => blank(b.tool),
+    'not JSON': (b, raw) => !isJsonObject(raw),
   },
   '/mod/acks': {
     'missing session_id': (b) => !('session_id' in b),
@@ -174,7 +175,9 @@ export function isJsonObject(raw) {
  * Returns the name of the case it matches, or null.
  */
 export function matchingAcceptCase(endpoint, body) {
-  const field = (o, k) => `${k}:${blank(o[k]) ? typeof o[k] + '(blank)' : typeof o[k]}`
+  const free = FREE_TEXT[endpoint] ?? []
+  const field = (o, k) =>
+    free.includes(k) ? `${k}:${typeof o[k]}` : `${k}:${blank(o[k]) ? typeof o[k] + '(blank)' : typeof o[k]}`
   const shape = (o) => Object.keys(o).sort().map((k) => field(o, k)).join(',')
   const rest = { ...body }
   for (const k of ANY_SHAPE[endpoint] ?? []) {
@@ -193,6 +196,14 @@ export function matchingAcceptCase(endpoint, body) {
  * the conversation on any state report, and one without it is taken as before.
  */
 const ANY_SHAPE = { '/hook': ['provider_session_id'] }
+
+/**
+ * Fields whose value is whatever the provider gave, blank included, so only
+ * their type is the shape. subagent-cards.md: `tool_use_id` is empty when the
+ * provider gives none, `model` and `isolation` when the call asks for none, and
+ * the conversation is the provider's to name.
+ */
+const FREE_TEXT = { '/subagent': ['provider_session_id', 'tool_use_id', 'model', 'isolation'] }
 
 export function assertContractHonoured(endpoint, request) {
   assert.equal(
@@ -245,8 +256,11 @@ const liveStubs = new Set()
  */
 export const settleStubs = () => Promise.all([...liveStubs].map((stub) => stub.settle()))
 
-/** `status` is the answer to every request, or a function of the request. */
-export async function startStub({ status = 204 } = {}) {
+/**
+ * `status` is the answer to every request, or a function of the request.
+ * `body`, when given, is the JSON text answered with it; `hang` never answers.
+ */
+export async function startStub({ status = 204, body, hang = false } = {}) {
   const requests = []
   const sockets = new Set()
   const server = createServer((req, res) => {
@@ -257,7 +271,10 @@ export async function startStub({ status = 204 } = {}) {
     })
     req.on('end', () => {
       requests.push({ method: req.method, url: req.url, headers: req.headers, raw })
-      res.writeHead(typeof status === 'function' ? status(req) : status).end()
+      if (hang) return
+      const code = typeof status === 'function' ? status(req) : status
+      if (body === undefined) res.writeHead(code).end()
+      else res.writeHead(code, { 'content-type': 'application/json' }).end(body)
     })
   })
   server.on('connection', (socket) => {

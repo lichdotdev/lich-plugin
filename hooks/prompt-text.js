@@ -3,9 +3,8 @@
 // session as LICH_PROMPT_LANG (`internal/prompt` there); an empty or unknown
 // value is English, as it is for lich itself.
 //
-// A text is a template with `{name}` slots. Tool and command names, the
-// `<lich-notification` tag with its attribute and kind names, and the status enums are literal in every locale: the model matches on
-// them, and so does the contract.
+// A text is a template with `{name}` slots. Tool and command names are literal
+// in every locale: the model matches on them.
 
 /** @type {Record<string, string>} */
 export const en = {
@@ -14,26 +13,6 @@ export const en = {
     "interrupt your turn and your answer is not added to the conversation. Tools are " +
     "unavailable: do not call any tool. Answer from what the conversation already holds, " +
     "in plain text, briefly. Question: ",
-  onBranch: "on branch {branch}",
-  whereBranch: "on branch {branch} in {path}, not in this checkout",
-  whereShared: "in this same checkout, {path}, and edits its files as you do",
-  backgrounded:
-    'The agent runs as the lich session "{label}", {where}. ' +
-    'Its full report arrives at this prompt by itself as a <lich-notification kind="worker-finished">, so there is no need to poll ' +
-    "or to call wait_for_answer (it still works). SendMessage cannot reach that session; " +
-    "send_to_session or lich send can.",
-  completedBranch:
-    'The work is on branch {branch} in {path} (lich session "{label}"), not in this checkout. ' +
-    "Reach that session with send_to_session or lich send, not SendMessage.",
-  completedShared:
-    'The work is in this same checkout, {path} (lich session "{label}"). ' +
-    "Reach that session with send_to_session or lich send, not SendMessage.",
-  denyNeverReached: 'the task never reached "{label}" ({status}): open its card.',
-  denyAnswered: 'lich answered "{status}" about "{label}"{branchPart}: open its card.',
-  denyInterrupted:
-    'interrupted; a lich session{branchPart} may already have the task, and a report it sends arrives here as a <lich-notification kind="worker-finished">.',
-  denyStopFailed: 'lich could not stop "{label}": {reason}',
-  lichExited: "lich exited {code}",
   editNoteJustNow: "under a minute ago",
   editNoteAgo: "{minutes} min ago",
   editNote:
@@ -60,26 +39,6 @@ export const ptBR = {
     "interrompe o seu turno e a sua resposta não entra na conversa. As ferramentas estão " +
     "indisponíveis: não chame nenhuma. Responda com o que a conversa já contém, " +
     "em texto simples e de forma breve. Pergunta: ",
-  onBranch: "na branch {branch}",
-  whereBranch: "na branch {branch} em {path}, não neste checkout",
-  whereShared: "neste mesmo checkout, {path}, e edita os arquivos dele como você",
-  backgrounded:
-    'O agente roda como a sessão lich "{label}", {where}. ' +
-    'O relatório completo chega neste prompt por conta própria como um <lich-notification kind="worker-finished">, então não é preciso ' +
-    "fazer polling nem chamar wait_for_answer (ele ainda funciona). SendMessage não alcança essa sessão; " +
-    "send_to_session ou lich send alcançam.",
-  completedBranch:
-    'O trabalho está na branch {branch} em {path} (sessão lich "{label}"), não neste checkout. ' +
-    "Fale com essa sessão por send_to_session ou lich send, não por SendMessage.",
-  completedShared:
-    'O trabalho está neste mesmo checkout, {path} (sessão lich "{label}"). ' +
-    "Fale com essa sessão por send_to_session ou lich send, não por SendMessage.",
-  denyNeverReached: 'a tarefa nunca chegou a "{label}" ({status}): abra o card dela.',
-  denyAnswered: 'o lich respondeu "{status}" sobre "{label}"{branchPart}: abra o card dela.',
-  denyInterrupted:
-    'interrompido; uma sessão lich{branchPart} pode já ter a tarefa, e o relatório que ela enviar chega aqui como um <lich-notification kind="worker-finished">.',
-  denyStopFailed: 'o lich não conseguiu parar "{label}": {reason}',
-  lichExited: "o lich saiu com {code}",
   editNoteJustNow: "há menos de um minuto",
   editNoteAgo: "há {minutes} min",
   editNote:
@@ -104,25 +63,6 @@ export const zhCN = {
   askPreamble:
     "这是在你的回合之外、你工作期间提出的旁路问题。它不会打断你的回合，你的回答也不会加入对话。" +
     "工具不可用：不要调用任何工具。请仅根据对话中已有的内容，用纯文本简要回答。问题：",
-  onBranch: "在分支 {branch} 上",
-  whereBranch: "在分支 {branch} 上的 {path} 中，不在当前 checkout 里",
-  whereShared: "在同一个 checkout {path} 中，并且和你一样编辑其中的文件",
-  backgrounded:
-    'agent 作为 lich 会话 "{label}" 运行，{where}。' +
-    '它的完整报告会以 <lich-notification kind="worker-finished"> 的形式自动出现在此提示中，因此无需轮询，也无需调用 ' +
-    "wait_for_answer（调用仍然有效）。SendMessage 无法联系该会话；send_to_session 或 lich send 可以。",
-  completedBranch:
-    '工作位于分支 {branch} 上的 {path}（lich 会话 "{label}"），不在当前 checkout 里。' +
-    "请通过 send_to_session 或 lich send 联系该会话，不要用 SendMessage。",
-  completedShared:
-    '工作位于同一个 checkout {path}（lich 会话 "{label}"）中。' +
-    "请通过 send_to_session 或 lich send 联系该会话，不要用 SendMessage。",
-  denyNeverReached: '任务从未送达 "{label}"（{status}）：请打开它的卡片。',
-  denyAnswered: 'lich 针对 "{label}"{branchPart} 返回了 "{status}"：请打开它的卡片。',
-  denyInterrupted:
-    '已中断；某个 lich 会话{branchPart}可能已经拿到任务，它发送的报告会以 <lich-notification kind="worker-finished"> 的形式出现在这里。',
-  denyStopFailed: 'lich 无法停止 "{label}"：{reason}',
-  lichExited: "lich 退出，退出码 {code}",
   editNoteJustNow: "不到一分钟前",
   editNoteAgo: "{minutes} 分钟前",
   editNote:
@@ -148,26 +88,6 @@ export const es = {
     "interrumpe tu turno y tu respuesta no se añade a la conversación. Las herramientas no están " +
     "disponibles: no llames a ninguna. Responde con lo que la conversación ya contiene, " +
     "en texto plano y de forma breve. Pregunta: ",
-  onBranch: "en la rama {branch}",
-  whereBranch: "en la rama {branch} en {path}, no en este checkout",
-  whereShared: "en este mismo checkout, {path}, y edita sus archivos igual que tú",
-  backgrounded:
-    'El agente se ejecuta como la sesión lich "{label}", {where}. ' +
-    'Su informe completo llega a este prompt por sí solo como un <lich-notification kind="worker-finished">, así que no hace falta ' +
-    "hacer polling ni llamar a wait_for_answer (sigue funcionando). SendMessage no puede llegar a esa sesión; " +
-    "send_to_session o lich send sí.",
-  completedBranch:
-    'El trabajo está en la rama {branch} en {path} (sesión lich "{label}"), no en este checkout. ' +
-    "Comunícate con esa sesión con send_to_session o lich send, no con SendMessage.",
-  completedShared:
-    'El trabajo está en este mismo checkout, {path} (sesión lich "{label}"). ' +
-    "Comunícate con esa sesión con send_to_session o lich send, no con SendMessage.",
-  denyNeverReached: 'la tarea nunca llegó a "{label}" ({status}): abre su tarjeta.',
-  denyAnswered: 'lich respondió "{status}" sobre "{label}"{branchPart}: abre su tarjeta.',
-  denyInterrupted:
-    'interrumpido; puede que una sesión lich{branchPart} ya tenga la tarea, y el informe que envíe llega aquí como un <lich-notification kind="worker-finished">.',
-  denyStopFailed: 'lich no pudo detener "{label}": {reason}',
-  lichExited: "lich terminó con {code}",
   editNoteJustNow: "hace menos de un minuto",
   editNoteAgo: "hace {minutes} min",
   editNote:
@@ -193,27 +113,6 @@ export const ja = {
     "これは、あなたが作業している間にターンの外から尋ねられた横からの質問です。あなたのターンを中断することはなく、" +
     "あなたの回答が会話に追加されることもありません。ツールは使えません。どのツールも呼び出さないでください。" +
     "会話にすでにある内容から、プレーンテキストで簡潔に答えてください。質問：",
-  onBranch: "ブランチ {branch}",
-  whereBranch: "ブランチ {branch} の {path} で、このチェックアウトではありません",
-  whereShared: "同じこのチェックアウト {path} で、あなたと同じようにそのファイルを編集します",
-  backgrounded:
-    'エージェントは lich セッション "{label}" として動いています（{where}）。' +
-    'そのレポート全体は <lich-notification kind="worker-finished"> として、このプロンプトに自動で届きます。' +
-    "そのためポーリングも wait_for_answer の呼び出しも必要ありません（呼んでも動作します）。SendMessage ではそのセッションに届きません。" +
-    "send_to_session または lich send なら届きます。",
-  completedBranch:
-    '作業はブランチ {branch} の {path} にあり（lich セッション "{label}"）、このチェックアウトにはありません。' +
-    "そのセッションには SendMessage ではなく、send_to_session または lich send で連絡してください。",
-  completedShared:
-    '作業は同じこのチェックアウト {path} にあります（lich セッション "{label}"）。' +
-    "そのセッションには SendMessage ではなく、send_to_session または lich send で連絡してください。",
-  denyNeverReached: 'タスクは "{label}" に届きませんでした（{status}）：そのカードを開いてください。',
-  denyAnswered: 'lich は "{label}"{branchPart} について "{status}" と答えました：そのカードを開いてください。',
-  denyInterrupted:
-    "中断されました。lich セッション{branchPart}がすでにタスクを受け取っている可能性があり、" +
-    'そのセッションが送るレポートは <lich-notification kind="worker-finished"> としてここに届きます。',
-  denyStopFailed: 'lich は "{label}" を停止できませんでした：{reason}',
-  lichExited: "lich が終了コード {code} で終了しました",
   editNoteJustNow: "1 分以内",
   editNoteAgo: "{minutes} 分前",
   editNote:
@@ -239,26 +138,6 @@ export const ko = {
     "이것은 당신이 작업하는 동안 턴 밖에서 들어온 곁가지 질문입니다. 당신의 턴을 중단하지 않으며, 당신의 답은 " +
     "대화에 추가되지 않습니다. 도구는 사용할 수 없습니다. 어떤 도구도 호출하지 마세요. 대화에 이미 있는 내용으로, " +
     "일반 텍스트로 짧게 답하세요. 질문: ",
-  onBranch: "브랜치 {branch}",
-  whereBranch: "브랜치 {branch}의 {path}, 이 체크아웃이 아님",
-  whereShared: "같은 체크아웃 {path}, 당신처럼 그 파일을 수정함",
-  backgrounded:
-    '에이전트는 lich 세션 "{label}"에서 실행됩니다({where}). ' +
-    '전체 보고서는 <lich-notification kind="worker-finished">로 이 프롬프트에 알아서 도착하므로, ' +
-    "폴링하거나 wait_for_answer를 호출할 필요가 없습니다(호출해도 동작합니다). SendMessage로는 그 세션에 닿을 수 없고, " +
-    "send_to_session이나 lich send로는 닿을 수 있습니다.",
-  completedBranch:
-    '작업은 브랜치 {branch}의 {path}에 있으며(lich 세션 "{label}"), 이 체크아웃에는 없습니다. ' +
-    "그 세션에는 SendMessage가 아니라 send_to_session이나 lich send로 연락하세요.",
-  completedShared:
-    '작업은 같은 체크아웃 {path}에 있습니다(lich 세션 "{label}"). ' +
-    "그 세션에는 SendMessage가 아니라 send_to_session이나 lich send로 연락하세요.",
-  denyNeverReached: '작업이 "{label}"에 한 번도 전달되지 않았습니다({status}): 그 카드를 열어 보세요.',
-  denyAnswered: 'lich의 답은 "{status}"였습니다("{label}"{branchPart}): 그 카드를 열어 보세요.',
-  denyInterrupted:
-    '중단되었습니다. 작업이 이미 lich 세션{branchPart}에 있을 수 있으며, 그 세션이 보내는 보고서는 <lich-notification kind="worker-finished">로 여기에 도착합니다.',
-  denyStopFailed: 'lich가 "{label}"을(를) 멈추지 못했습니다: {reason}',
-  lichExited: "lich 종료 코드 {code}",
   editNoteJustNow: "1분 이내",
   editNoteAgo: "{minutes}분 전",
   editNote:
@@ -284,26 +163,6 @@ export const ru = {
     "Это побочный вопрос, заданный вне вашего хода, пока вы работаете. Он не прерывает ваш ход, и ваш ответ " +
     "не добавляется в разговор. Инструменты недоступны: не вызывайте никаких инструментов. Отвечайте, исходя " +
     "из того, что уже есть в разговоре, простым текстом и кратко. Вопрос: ",
-  onBranch: "в ветке {branch}",
-  whereBranch: "в ветке {branch} в {path}, а не в этой рабочей копии",
-  whereShared: "в этой же рабочей копии, {path}, и редактирует её файлы так же, как вы",
-  backgrounded:
-    'Агент работает как сессия lich "{label}", {where}. ' +
-    'Его полный отчёт сам придёт в этот промпт как <lich-notification kind="worker-finished">, поэтому не нужно ни опрашивать, ' +
-    "ни вызывать wait_for_answer (он по-прежнему работает). SendMessage не может связаться с этой сессией; " +
-    "send_to_session или lich send могут.",
-  completedBranch:
-    'Работа находится в ветке {branch} в {path} (сессия lich "{label}"), а не в этой рабочей копии. ' +
-    "Связывайтесь с этой сессией через send_to_session или lich send, а не через SendMessage.",
-  completedShared:
-    'Работа находится в этой же рабочей копии, {path} (сессия lich "{label}"). ' +
-    "Связывайтесь с этой сессией через send_to_session или lich send, а не через SendMessage.",
-  denyNeverReached: 'задача так и не дошла до "{label}" ({status}): откройте её карточку.',
-  denyAnswered: 'lich ответил "{status}" для "{label}"{branchPart}: откройте её карточку.',
-  denyInterrupted:
-    'прервано; задача, возможно, уже у сессии lich{branchPart}, и отчёт, который она отправит, придёт сюда как <lich-notification kind="worker-finished">.',
-  denyStopFailed: 'lich не смог остановить "{label}": {reason}',
-  lichExited: "lich завершился с кодом {code}",
   editNoteJustNow: "меньше минуты назад",
   editNoteAgo: "{minutes} мин назад",
   editNote:

@@ -16,14 +16,14 @@ hooks/codex-hooks.json            # hook registration, Codex
 hooks/crush-hooks.json            # hook registration, Crush (hand-merged into crush.json)
 hooks/                            # hook scripts (all four run them; only how they are addressed differs)
 hooks/detail.jq                   # what a tool call acts on, shared by two of those scripts
-hooks/conversation-id.sh          # the conversation a payload comes from, sourced by three of them
+hooks/conversation-id.sh          # the conversation a payload comes from, sourced by four of them
+hooks/veto-subagent.sh            # the subagent veto: the one hook that blocks, waiting on lich's answer
 hooks/win-run.cmd                 # runs one of those scripts on Windows (Codex)
+hooks/win-veto.cmd                # runs veto-subagent.sh on Windows (Codex), keeping the stdout its veto rides
 hooks/lich.js                     # the one module hooks/hooks.json names under `modules`: registers the mods below
 hooks/mod-control.js              # Claude Code mod: lich drives the session
-hooks/agent-cards.js              # Claude Code mod: a general-purpose subagent runs as a lich session
 hooks/mod-usage.js                # Claude Code mod: the session reports its own context, rate limits and cost
 hooks/edit-guard.js               # Claude Code mod: an edit says which other lich session edited the file
-hooks/worker-answer.js            # Claude Code mod: a lich subagent worker's last message answers its task
 hooks/mod-status.js               # Claude Code mod: the session's relay errands in the prompt footer
 hooks/mod-compacting.js           # Claude Code mod: the card says when the conversation is being compacted
 hooks/self-command.js             # Claude Code mod: the session runs a built-in slash command the user asked for
@@ -64,11 +64,10 @@ Contracts are **canonical in the lich repository** (`docs/hooks/` there); this p
 - [docs/session-title.md](docs/session-title.md) — the provider's own session title, via `PostToolUse`/`PreInvocation` and `Stop`
 - [docs/session-touched.md](docs/session-touched.md) — git-status refresh signal via `PostToolUse` (file-mutating tools only)
 - [docs/mod-control.md](docs/mod-control.md): lich drives a Claude Code session (prompt, abort, model, effort, command) and asks it side questions (ask) through a mod that long-polls for commands and acks each one; Claude Code only, the other harnesses have no mod system
-- [docs/agent-cards.md](docs/agent-cards.md): a general-purpose subagent Claude Code starts runs as a lich session, through the `lich open` CLI rather than an HTTP contract; Claude Code only
 - [docs/mod-usage.md](docs/mod-usage.md): a Claude Code session reports the context window, rate limits and cost it measured itself, through a mod hooking `session.measure`; Claude Code only
-- [docs/mod-answer.md](docs/mod-answer.md): a lich subagent worker answers the task it was handed with its turn's final message, through a mod reading the main loop's `classic.Stop` and `turn.complete`; Claude Code only
 - [docs/mod-status.md](docs/mod-status.md): a Claude Code session shows the relay errands it is part of (owed, out, ready) in its prompt footer, through a mod reading `/mod/status`, which never collects; Claude Code only
 - [docs/self-command.md](docs/self-command.md): a Claude Code session runs a built-in slash command the user asked it for (`/compact`), queued after the turn, through a mod answering the Skill tool's refusal of a built-in, and lich's `control_session` refusal of the session's own, by queueing the command itself; Claude Code only
+- [docs/subagent-cards.md](docs/subagent-cards.md): the agent's own subagent call becomes a lich session, through a pre-tool hook that asks `/subagent` and turns lich's deny into the harness's veto; every harness but opencode 2, Kiro CLI through lich's own registration
 - [docs/edit-guard.md](docs/edit-guard.md): an edit to a file another lich session edited in the last minutes carries a note naming it, through markers in the checkout's git dir rather than an HTTP contract; Claude Code only
 - [docs/providers.md](docs/providers.md) — the per-harness map, including what installing on omp takes and what it cannot report
 
@@ -107,8 +106,6 @@ Claude Code mod, handing it a fake `$` and asserting its acks against the
 mod-control fixtures and its polls against the commands lich sends;
 [tests/mod-usage.test.mjs](tests/mod-usage.test.mjs) does the same for its
 usage reports against the mod-usage fixtures,
-[tests/worker-answer.test.mjs](tests/worker-answer.test.mjs) for a worker's
-answer against the mod-answer fixtures,
 [tests/mod-status.test.mjs](tests/mod-status.test.mjs) for the footer line it
 draws from the mod-status response, and
 [tests/mod-compacting.test.mjs](tests/mod-compacting.test.mjs) for the
@@ -118,27 +115,26 @@ fake `$` with an in-memory git dir and asserts the markers it leaves and the
 note another session's marker adds, and
 [tests/status-line.test.mjs](tests/status-line.test.mjs) that the mods share
 one lich line in the prompt footer.
-[tests/agent-cards.test.mjs](tests/agent-cards.test.mjs) hands the agent-cards
-mod the same kind of fake `$` and asserts the `lich open` argv
-it runs, the Agent result it answers each outcome with, and that a call it does
-not take, or one lich cannot take, reaches the native agent untouched.
 [tests/self-command.test.mjs](tests/self-command.test.mjs) does the same for
 the self-command mod: which Skill calls it takes, that the command runs only
 after the call is answered, and that `/model` and `/effort` never run.
+[tests/subagent.test.mjs](tests/subagent.test.mjs) runs every harness's
+subagent veto, the script as each registration spells it and the two modules
+in process, against a stub answering with the subagent-cards fixture's
+answers: the body each sends for its own call, the veto each turns a deny into
+with the reason untouched, and the allow every failure is.
 [tests/contract.mjs](tests/contract.mjs) is the fixtures, the assertions and the
 stub, shared so every client answers to the same lines. Node only, no
 dependencies.
 [tests/mod-control.engine.test.ts](tests/mod-control.engine.test.ts) and
-[tests/agent-cards.engine.test.ts](tests/agent-cards.engine.test.ts) and
 [tests/mod-usage.engine.test.ts](tests/mod-usage.engine.test.ts) and
 [tests/mod-status.engine.test.ts](tests/mod-status.engine.test.ts) and
-[tests/worker-answer.engine.test.ts](tests/worker-answer.engine.test.ts) and
 [tests/edit-guard.engine.test.ts](tests/edit-guard.engine.test.ts) and
 [tests/self-command.engine.test.ts](tests/self-command.engine.test.ts) run the
 mods under Claude Code's own engine (`claude plugin test .`); they need a
 `claude` binary, so CI does not run them. The kit does not check a `tool.call`
 result against the tool's output schema (measured on 2.1.289), so whether
-Claude Code accepts the Agent result is a live run's to answer.
+Claude Code accepts a mod's tool result is a live run's to answer.
 
 The fixtures are vendored in `tests/fixtures/` from lich
 (`docs/hooks/fixtures/*.jsonl` there) by
@@ -157,11 +153,11 @@ commit it pins until a release ships it.
   endpoint), `tests/lich-ref` pins that merge commit, the plugin release that
   speaks it is tagged here next, and the lich release that installs it is cut
   last.
-- A hook must never block or fail the user's turn: short timeout, errors swallowed, always exit 0. On Codex the exit code is louder still — `2` on `PermissionRequest` denies the request, so silence and exit 0 are what keep a report an observation.
+- A hook must never block or fail the user's turn: short timeout, errors swallowed, always exit 0. The subagent veto is the one hook that blocks, because lich's answer is the decision: it waits 10 seconds at most, and every failure lets the call run. On Codex the exit code is louder still — `2` on `PermissionRequest` denies the request, so silence and exit 0 are what keep a report an observation.
 - Outside lich (env vars absent) every hook is a no-op with exit 0 — the plugin must be safe to install globally.
 - A skill must be useful from any working directory: the user runs the agent CLI on their own project, not on the lich checkout.
 - One script per contract, shared by every provider that runs commands. Registration differs per harness, the report does not — extend a script to read a second transcript format before adding a second script. A harness that runs no commands at all is the one case for a client of its own, which is what `opencode/lich.js` and `omp/lich.js` are; they still send the same payloads to the same endpoints.
-- opencode and omp both await their plugin handlers, so neither `lich.js` ever awaits a report or throws — that is their version of "always exit 0". The omp one also subscribes to nothing outside lich: omp loads it on every run on the machine, so the gate has to be in the module.
+- opencode and omp both await their plugin handlers, so neither `lich.js` ever awaits a report or throws — that is their version of "always exit 0". The subagent veto is the exception in both, as in the scripts: it awaits lich's answer, and a deny is how each refuses the call (opencode by throwing, omp by returning `{block: true}`). The omp one also subscribes to nothing outside lich: omp loads it on every run on the machine, so the gate has to be in the module.
 - **A module client names only events it was measured emitting.** A name read off a type declaration is a report that silently never fires, which is worse than an absent feature — the omp `waiting` state is left unreported for exactly this reason.
 - **The same goes for every other name a registration carries** — an event, a tool a matcher names, a payload field, a plugin-root variable. All of them fail the same way: quietly, on every event, with a green test suite, because a harness that never runs the hook reports nothing to disagree with.
 - **A name is measured off a real payload, or it is a guess.** Not from a harness you already support, and not from a symbol table or an enum either — those are the *implementation's* names, and something may map them before they reach a hook. Antigravity is the worked example in both directions: its guide says a tool name is the step type lowercased with `CORTEX_STEP_TYPE_` dropped, and the enum's `MCP_TOOL` still arrives as `call_mcp_tool`. Its write tools really are `write_to_file` and `replace_file_content`, which the enum does not contain. Run the turn, print the payload, read the name off it — a matcher built any other way matches nothing, and losing a report costs no error, only the report.
@@ -188,6 +184,6 @@ Same standard as the `lich` repository (Keep a Changelog + SemVer). Releases are
 
 1. Move the `[Unreleased]` entries in `CHANGELOG.md` under the new version heading (with date) and refresh the compare links at the bottom.
 2. Pick the number by what changed: a release that sends anything lich's contract did not already accept (a new endpoint, header, field or value) bumps the **minor** (the major, from 1.0); anything else bumps the **patch**. lich accepts every release below the next minor of the contract it implements, so a contract change released as a patch reaches a lich that refuses it. A contract change is tagged here once lich has merged it and before the lich release that installs it, since that lich may fetch files only this release ships; an older lich never picks it up, because its ceiling stops below this minor. `docs/hooks/README.md` in lich, Versioning, is the rule.
-3. Align `version` in `.claude-plugin/plugin.json` **and** `.codex-plugin/plugin.json` with the tag, and `plugin_version` in each `hooks/report-*.sh` and `PLUGIN_VERSION` in `opencode/lich.js`, `omp/lich.js`, `hooks/mod-control.js`, `hooks/mod-usage.js`, `hooks/mod-status.js`, `hooks/mod-compacting.js` and `hooks/worker-answer.js`, the header every report sends. The suite fails while any of them disagrees with the Claude Code manifest. The root `plugin.json` is not a third one to bump: Antigravity's manifest takes only a `name`, and lich writes its own carrying the tag when it installs a release.
+3. Align `version` in `.claude-plugin/plugin.json` **and** `.codex-plugin/plugin.json` with the tag, and `plugin_version` in each `hooks/report-*.sh` and in `hooks/veto-subagent.sh`, and `PLUGIN_VERSION` in `opencode/lich.js`, `omp/lich.js`, `hooks/mod-control.js`, `hooks/mod-usage.js`, `hooks/mod-status.js`, and `hooks/mod-compacting.js`, the header every report sends. The suite fails while any of them disagrees with the Claude Code manifest. The root `plugin.json` is not a third one to bump: Antigravity's manifest takes only a `name`, and lich writes its own carrying the tag when it installs a release.
 4. Annotated tag `vX.Y.Z` + push with the tag.
 5. `gh release create vX.Y.Z` with the notes taken from the matching `CHANGELOG.md` section.

@@ -11,6 +11,12 @@
         "matcher": "^(edit|write|multiedit|bash)$",
         "command": "\"<lich-plugin>/hooks/report-touched.sh\"",
         "timeout": 5
+      },
+      {
+        "name": "lich subagent cards",
+        "matcher": "^agent$",
+        "command": "\"<lich-plugin>/hooks/veto-subagent.sh\" crush",
+        "timeout": 15
       }
     ]
   }
