@@ -19,10 +19,19 @@ ref=$(tr -d '[:space:]' <"$here/lich-ref")
 raw=https://raw.githubusercontent.com/lichdotdev/lich/$ref
 base=$raw/docs/hooks/fixtures
 
-for file in session-start.jsonl session-state.jsonl session-title.jsonl; do
+for file in session-start.jsonl session-title.jsonl; do
   curl -fsSL "$base/$file" -o "$here/fixtures/$file"
   echo "refreshed $file at $ref"
 done
+
+# session-state gained `background` on the done report in lich's commit
+# bb6c4a07 (fix/turn-end-background-work), in no release yet, so it is read at
+# that commit. Once a release ships it, move tests/lich-ref to that release and
+# put the file back in the loop above.
+unreleased=bb6c4a0729e237d4d08a33553ee2f0d4168cbd8c
+curl -fsSL "https://raw.githubusercontent.com/lichdotdev/lich/$unreleased/docs/hooks/fixtures/session-state.jsonl" \
+  -o "$here/fixtures/session-state.jsonl"
+echo "refreshed session-state.jsonl at $unreleased (unreleased)"
 
 # session-touched gained paths, hold, collect and the edit note in lich's merge
 # commit c62b0796 (feat/touched-edit-note), in no release yet, so it is read at
