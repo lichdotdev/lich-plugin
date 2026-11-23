@@ -27,8 +27,11 @@ to a subagent tool is asked about.
 (the conversation, as the state reports read it), `nested`, `call`, `tool`,
 `tool_use_id`, `tasks[]` of `{title, prompt, type}`, `model`, `sealed`,
 `isolation`, `background`, every field present, empty or `false` when the
-call does not give it. The token rides an `Authorization: Bearer` header from
-the script and `?token=` from the two modules, as in every other report.
+call does not give it. `tool_use_id` is the payload's `tool_use_id`, or
+Antigravity's `toolCall.id`. The token rides an `Authorization: Bearer` header
+from the script and `?token=` from the two modules, as in every other report.
+The script feeds curl the body on stdin and the header through a config on a
+file descriptor, so neither the task nor the token is ever a process argument.
 
 ## How it behaves
 
@@ -74,21 +77,31 @@ The files each needs: `hooks/veto-subagent.sh` and `hooks/conversation-id.sh`
 for all three; Antigravity's `hooks.json` also runs `hooks/report-tool.sh` and
 `hooks/detail.jq` as before.
 
-## Not measured
+## Measured, and not
 
 The tool names and the input fields are the contract's table, measured by lich
-on 2026-11-22. These were not measured, and each fails to an allow or an empty
-field when it is wrong:
+on 2026-11-22. The same day lich measured these whole payloads, which the suite
+replays:
 
-- `tool_use_id` as a payload field outside Claude Code (Codex, Kiro, Crush, the
-  Claude Code-compatible hook Cursor runs); Antigravity sends none here.
-- Kiro's payload envelope (`tool_name`, `tool_input`, `session_id`), where
-  `use_subagent` keeps its `subagents` (`content.subagents` or top level) and
-  how it spells the `InvokeSubagents` command.
+- Antigravity: camelCase, `conversationId` and `toolCall: {id, name, args:
+  {Prompt, Role, TypeName}}`. It also fires for the subagent's own tools, under
+  the subagent's `conversationId`, which lich tells apart by
+  `provider_session_id`.
+- Kiro CLI over ACP, which lich spawns: `{hook_event_name, cwd, session_id,
+  tool_name: "subagent", tool_input: {task, mode, stages: [{name, role,
+  prompt_template}]}}`. Its classic chat sends no `session_id`, and its
+  `use_subagent` input is `{command: "InvokeSubagents", content: {subagents:
+  [{query}]}}` (after a `ListAgents`, which is not asked about).
+- Cursor CLI, through the Claude Code install's hook: `{conversation_id,
+  session_id, tool_name: "Task", tool_input, tool_use_id, ...}`, no `agent_id`;
+  that hook vetoes with Claude Code's JSON in `cursor-agent -p`.
+
+Still not measured, each failing to an allow or an empty field when wrong:
+
+- `tool_use_id` on Codex and Crush payloads.
 - How oh-my-pi's `context` joins each task's prompt (here: first, a blank line
   after it).
-- Cursor CLI's payload, taken to be Claude Code's.
-- `win-veto.cmd`, on a Windows machine.
+- `win-veto.cmd` and the file-descriptor config, on a Windows machine.
 
 opencode 2 is left out: its subagent tool is `subagent` and the contract has no
 row for it.

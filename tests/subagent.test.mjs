@@ -5,16 +5,16 @@
 // registration spells it; opencode and omp run their modules in process.
 //
 // The answers are lich's own, replayed from subagent-cards.jsonl. The request
-// payloads are the provider's, written here from the contract's table (Event →
-// veto mapping): lich measured those names, and this suite holds the clients to
-// them, not to a real run.
+// payloads are the provider's: the contract's table (Event → veto mapping) for
+// the names, and for Antigravity, Kiro CLI and Cursor CLI the whole payload as
+// lich measured it on 2026-11-22, the long fields cut.
 //
 // Run: node --test tests/
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { mkdtempSync, readFileSync, symlinkSync } from 'node:fs'
+import { mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
@@ -233,8 +233,26 @@ const CALLS = [
   {
     name: "a Cursor CLI Task call, through the Claude Code install's hook",
     harness: 'claude',
-    payload: { session_id: 'p1', tool_name: 'Task', tool_input: { description: 'Map it', prompt: 'Map the relay package.', subagent_type: 'explore' } },
-    body: body({ tool: 'Task', tasks: [{ title: 'Map it', prompt: 'Map the relay package.', type: 'explore' }] }),
+    // Cursor's own shape, not Claude Code's: no agent_id, and an id with a
+    // newline in it.
+    payload: {
+      conversation_id: 'p1',
+      generation_id: 'g1',
+      model: '',
+      tool_name: 'Task',
+      tool_input: { description: 'Map it', prompt: 'Map the relay package.', subagent_type: 'explore' },
+      tool_use_id: 'call-2f14-1\nfc_45ba_0',
+      session_id: 'p1',
+      hook_event_name: 'preToolUse',
+      cursor_version: '2026.10.19-6bbf2c4',
+      workspace_roots: ['/w'],
+      transcript_path: '/t.jsonl',
+    },
+    body: body({
+      tool: 'Task',
+      tool_use_id: 'call-2f14-1\nfc_45ba_0',
+      tasks: [{ title: 'Map it', prompt: 'Map the relay package.', type: 'explore' }],
+    }),
   },
   {
     name: 'a Codex v1 spawn_agent call',
@@ -257,24 +275,46 @@ const CALLS = [
   {
     name: 'an Antigravity invoke_subagent call',
     harness: 'antigravity',
-    payload: { conversationId: 'p1', toolCall: { name: 'invoke_subagent', args: { Prompt: FIX, TypeName: 'general' } } },
-    body: body({ tool: 'invoke_subagent', tasks: [{ title: '', prompt: FIX, type: 'general' }] }),
+    payload: {
+      artifactDirectoryPath: '/b/p1',
+      conversationId: 'p1',
+      cwd: '/w',
+      hookEventName: 'PreToolUse',
+      modelName: 'gemini-3.8-flash-high',
+      stepIdx: 3,
+      toolCall: { args: { Prompt: FIX, Role: 'Fixer', TypeName: 'self' }, id: 'call_8341775817706615516', name: 'invoke_subagent' },
+      workspacePaths: ['/w'],
+    },
+    body: body({ tool: 'invoke_subagent', tool_use_id: 'call_8341775817706615516', tasks: [{ title: '', prompt: FIX, type: 'self' }] }),
   },
   {
     name: 'a Kiro CLI subagent call (ACP)',
     harness: 'kiro',
-    payload: { session_id: 'p1', tool_name: 'subagent', tool_input: { task: FIX, stages: [{ name: 'Fix it' }, { name: 'Review' }] } },
-    body: body({ tool: 'subagent', tasks: [{ title: 'Fix it', prompt: FIX, type: '' }] }),
+    payload: {
+      hook_event_name: 'preToolUse',
+      cwd: '/w',
+      session_id: 'p1',
+      tool_name: 'subagent',
+      tool_input: {
+        task: FIX,
+        mode: 'blocking',
+        stages: [{ name: 'fix_handshake', role: 'kiro_default', prompt_template: 'Fix the race. Report what you changed.' }],
+      },
+    },
+    body: body({ tool: 'subagent', tasks: [{ title: 'fix_handshake', prompt: FIX, type: '' }] }),
   },
   {
+    // The classic chat names no session.
     name: 'a Kiro CLI use_subagent call starting two subagents',
     harness: 'kiro',
     payload: {
-      session_id: 'p1',
+      hook_event_name: 'preToolUse',
+      cwd: '/w',
       tool_name: 'use_subagent',
       tool_input: { command: 'InvokeSubagents', content: { subagents: [{ query: 'Map the relay package.' }, { query: 'Fix #412.' }] } },
     },
     body: body({
+      provider_session_id: '',
       tool: 'use_subagent',
       tasks: [
         { title: '', prompt: 'Map the relay package.', type: '' },
@@ -368,6 +408,7 @@ const NOT_ASKED = [
   ['codex', { session_id: 'p1', tool_name: 'spawn_agent', tool_input: {} }],
   ['antigravity', { conversationId: 'p1', toolCall: { name: 'run_command', args: { CommandLine: 'ls' } } }],
   ['kiro', { session_id: 'p1', tool_name: 'use_subagent', tool_input: { command: 'ListAgents' } }],
+  ['kiro', { session_id: 'p1', tool_name: 'use_subagent', tool_input: { content: { subagents: [{ query: 'Fix #412.' }] } } }],
   ['kiro', { session_id: 'p1', tool_name: 'use_subagent', tool_input: { command: 'InvokeSubagents', content: { subagents: [] } } }],
   ['crush', { session_id: 'p1', tool_name: 'bash', tool_input: { command: 'ls' } }],
   ['opencode', { input: { tool: 'bash', sessionID: 'p1', callID: 'c' }, args: { command: 'ls' } }],
@@ -505,6 +546,36 @@ test('without jq the script asks nothing and the call runs', async () => {
       { status: 200, body: JSON.stringify(DENY) },
     )
   }
+})
+
+// The body carries the task, and the token is the session's: neither may be an
+// argument of a process, which every user on the machine can read for as long
+// as the hook waits.
+test('the script keeps the task and the token out of every command line', async () => {
+  const bin = mkdtempSync(path.join(TMP, 'bin-recording-'))
+  const argv = path.join(bin, 'argv')
+  for (const tool of ['curl', 'printf', 'jq']) {
+    const real = await new Promise((resolve) => {
+      const which = spawn('/bin/sh', ['-c', `command -v ${tool}`])
+      let out = ''
+      which.stdout.on('data', (c) => (out += c))
+      which.on('close', () => resolve(out.trim()))
+    })
+    writeFileSync(path.join(bin, tool), `#!/bin/sh\necho "${tool} $*" >>"${argv}"\nexec "${real}" "$@"\n`, { mode: 0o755 })
+  }
+  writeFileSync(argv, '')
+  await withStub(
+    async (stub) => {
+      const env = { ...lichEnv(stub.port), PATH: `${bin}${path.delimiter}${process.env.PATH}` }
+      assert.deepEqual(await outcome('claude', callOf('claude').payload, env), { veto: DENY.reason })
+      subagentRequest('claude', stub)
+      const ran = readFileSync(argv, 'utf8')
+      assert.match(ran, /^curl /m, 'the recording curl never ran')
+      assert.ok(!ran.includes(TOKEN), `the token was an argument of a process:\n${ran}`)
+      assert.ok(!ran.includes(FIX), `the task was an argument of a process:\n${ran}`)
+    },
+    { status: 200, body: JSON.stringify(DENY) },
+  )
 })
 
 // ----------------------------------------------------------- registrations --
