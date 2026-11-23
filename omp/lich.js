@@ -7,7 +7,9 @@
 // fed a payload on stdin. So this one file plays the part the four hooks/*.sh
 // scripts play on the harnesses that do run commands, the way opencode/lich.js
 // does: same transport, same payloads, same rule — outside lich it is a no-op,
-// and it never blocks or fails the user's turn.
+// and it never fails the user's turn. It blocks in one place, a `task` call
+// waiting on lich's veto (vetoReason, below), because there the answer is the
+// decision.
 //
 // Every event name and context method used here was measured against omp
 // v17.3.0 (@oh-my-pi/pi-coding-agent), against a stub listener, not read off
@@ -19,7 +21,7 @@
 // no package around it to resolve a shared module from — so the duplication is
 // the packaging, not an oversight.
 
-// Fire and forget. Nothing here is awaited: omp awaits its extension handlers,
+// Fire and forget. No report is awaited: omp awaits its extension handlers,
 // so a slow or dead listener would sit in front of the agent's next step. The
 // environment is read per report rather than at import, so a module loaded
 // outside lich stays a no-op instead of a cached decision.
@@ -39,6 +41,65 @@ function report(path, body) {
       signal: AbortSignal.timeout(1000),
     }).catch(() => {})
   } catch {}
+}
+
+// The one request this module awaits: lich's answer decides whether a `task`
+// call runs (docs/subagent-cards.md), so the call waits for it, 10 seconds at
+// most. Every way of not getting a deny (an error, a timeout, a status other
+// than 200, a body that is not a decision) resolves to undefined, which lets
+// the call run. A deny resolves to lich's reason, untouched.
+const VETO_WAIT_MS = 10000
+
+async function vetoReason(body) {
+  try {
+    const res = await fetch(
+      `http://127.0.0.1:${process.env.LICH_PORT}/subagent?token=${process.env.LICH_TOKEN}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-lich-plugin": PLUGIN_VERSION },
+        body: JSON.stringify({ session_id: process.env.LICH_SESSION_ID, ...body }),
+        signal: AbortSignal.timeout(VETO_WAIT_MS),
+      },
+    )
+    if (res.status !== 200) return undefined
+    const answer = await res.json()
+    return answer?.decision === "deny" && typeof answer.reason === "string" && answer.reason !== ""
+      ? answer.reason
+      : undefined
+  } catch {
+    return undefined
+  }
+}
+
+const text = (value) => (typeof value === "string" ? value : "")
+
+// The `task` call as lich's /subagent body, one task per entry of its `tasks`,
+// or undefined when lich would refuse it for want of a prompt, which leaves it
+// native without asking. Field names are the contract's table (Event → veto
+// mapping), measured on 18.8.9 there; how `context` joins each prompt is not
+// given, so it goes first with a blank line after it.
+function subagentBody(event, ctx) {
+  const input = event?.input
+  const entries = Array.isArray(input?.tasks) ? input.tasks : []
+  const context = text(input?.context).trim()
+  const tasks = entries.map((entry) => ({
+    title: text(entry?.name),
+    prompt: context && text(entry?.task) ? `${context}\n\n${text(entry.task)}` : text(entry?.task),
+    type: text(entry?.agent),
+  }))
+  if (tasks.length === 0 || tasks.some((task) => task.prompt.trim() === "")) return undefined
+  return {
+    provider_session_id: sessionIdOf(ctx) ?? "",
+    nested: false,
+    call: "spawn",
+    tool: event.toolName,
+    tool_use_id: text(event.toolCallId),
+    tasks,
+    model: "",
+    sealed: false,
+    isolation: "",
+    background: false,
+  }
 }
 
 function inLich() {
@@ -163,16 +224,20 @@ export default function lichPlugin(pi) {
     }),
   )
 
-  // The tool line on the card. This handler is on the agent's critical path:
-  // returning `{block: true}` from it would refuse the call, so it returns
-  // nothing, always.
-  pi.on(
-    "tool_call",
-    safely((event, ctx) => {
+  // The tool line on the card, and lich's say on a `task` call. This handler
+  // is on the agent's critical path: returning `{block: true}` from it refuses
+  // the call, so it returns that for lich's deny and nothing otherwise. One
+  // handler does both, since `safely` drops what a handler returns.
+  pi.on("tool_call", async (event, ctx) => {
+    try {
       if (typeof event?.toolName !== "string" || event.toolName === "") return
       report("hook", { state: "busy", tool: event.toolName, detail: detailOf(event.input), ...conversation(ctx) })
-    }),
-  )
+      if (event.toolName !== "task") return
+      const body = subagentBody(event, ctx)
+      const reason = body && (await vetoReason(body))
+      if (reason) return { block: true, reason }
+    } catch {}
+  })
 
   // After the write, not before it: `tool_result` is where the tree has already
   // changed, so the refresh lich runs sees it.

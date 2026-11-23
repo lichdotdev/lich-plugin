@@ -7,16 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+Needs the lich release after v0.92.0, the first that answers `/subagent` and
+sends the notification envelope. This release is a minor so that an older lich
+never installs it.
 
-- **A subagent card's report is described as lich's envelope.** The note the
-  Agent call answers with, in every prompt language, says the worker's report
-  arrives at the prompt by itself as a `<lich-notification kind="worker-finished">`,
-  the envelope lich hands every note in, so there is nothing to poll or collect.
-  It no longer speaks of a `[lich]` note, which lich no longer sends. Needs the
-  lich release after v0.92.0, the first that sends the notification envelope;
-  this release is a minor so that an older lich, still sending `[lich]` notes,
-  never installs it.
+### Added
+
+- **A subagent call becomes a lich session on every harness but opencode 2.**
+  Before the agent's own subagent tool runs (Claude Code's `Agent`, Cursor CLI's
+  `Task`, Codex's `spawn_agent`, `collaborationspawn_agent` and
+  `collaborationwait_agent`, Antigravity's `invoke_subagent`, Crush's `agent`,
+  opencode's and oh-my-pi's `task`, and Kiro CLI's `subagent` and
+  `use_subagent` through lich's own registration), the new
+  `hooks/veto-subagent.sh`, or the opencode and oh-my-pi module, asks lich. lich
+  opens the task as a card you can watch and take over, and the call is refused
+  in the harness's own way with lich's reason, which the model reads. The card's
+  report arrives at the prompt by itself as a
+  `<lich-notification kind="worker-finished">`. Which subagent types stay
+  native is lich's call. When lich does not answer within 10 seconds, or cannot
+  be reached, the native subagent runs. Codex on Windows runs the hook through
+  `hooks/win-veto.cmd`, which keeps the veto `win-run.cmd` would drop.
+
+### Removed
+
+- **The Claude Code mod no longer opens subagent cards itself.** Its
+  agent-cards, which answered the `Agent` call as a background agent, and its
+  worker answer, which posted a worker's last message to `/mod/answer`, are
+  gone: lich's veto above replaces the first, and lich reads a worker's answer
+  off its final message itself. Their texts in every prompt language go with
+  them, and so does the worker count in the prompt footer, which the errands
+  already counted.
 
 ## [0.21.1] - 2026-11-13
 

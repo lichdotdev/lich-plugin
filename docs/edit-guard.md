@@ -11,7 +11,7 @@ dir, and nothing is sent to lich.
 
 ## Why
 
-A general-purpose subagent lich opens ([agent-cards.md](agent-cards.md)) works
+A subagent lich opens as a card ([subagent-cards.md](subagent-cards.md)) works
 in the asking session's checkout by default, so two Claude Code sessions can
 edit the same file at once. Each one only sees the other's change when it reads
 the file again, and neither knows who made it or that the other may still be at

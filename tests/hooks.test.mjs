@@ -83,7 +83,7 @@ function runHook(command, { env = {}, stdin = '', pluginRoot = true, tmpdir = nu
   })
 }
 
-// A hook script never speaks on stdout: on Codex the session-state hook rides
+// A report script never speaks on stdout: on Codex the session-state hook rides
 // PermissionRequest, where output and a non-zero exit are an answer to the
 // request rather than an observation.
 //
@@ -91,7 +91,9 @@ function runHook(command, { env = {}, stdin = '', pluginRoot = true, tmpdir = nu
 // stdout and acts on it, and a PreToolUse handler that says nothing leaves the
 // tool call without the `decision` its contract makes required. So the verdict
 // is appended by the registration, not printed by the shared script, and what
-// arrives on stdout is exactly that verdict and nothing the script added.
+// arrives on stdout is exactly that verdict and nothing the script added. The
+// subagent veto is the one script that speaks, its stdout being the veto: on
+// Antigravity's PreToolUse it prints the verdict (ANTIGRAVITY_VETO_CHAIN).
 function assertHookSucceeded(result, stdout = '') {
   assert.equal(result.code, 0, `exited ${result.code}: ${result.stderr}`)
   assert.equal(result.stdout, stdout, `stdout was ${JSON.stringify(result.stdout)}`)
@@ -142,6 +144,7 @@ const SCRIPTS = {
 /**
  * What each harness registers. Claude Code, Codex and Antigravity carry every
  * report; Crush carries the two its single `PreToolUse` event can honour,
+ * besides the subagent veto, which is no report (subagent.test.mjs),
  * because a `busy` nothing can end would pin a spinner to a card
  * (docs/providers.md).
  */
@@ -174,11 +177,28 @@ const eventsIn = (json) => json.hooks ?? json.lich
  * off here, so every assertion below stays about the report the script sent.
  */
 function splitVerdict(command) {
+  const chained = command.match(ANTIGRAVITY_VETO_CHAIN)
+  if (chained) return { report: chained[1], stdout: chained[2] }
   const m = command.match(/;\s*printf\s+'(.*)'\s*$/)
   return m
     ? { report: command.slice(0, m.index), stdout: m[1] }
     : { report: command, stdout: '' }
 }
+
+/**
+ * Antigravity's `PreToolUse` runs the tool report and the subagent veto as one
+ * command, so the tool call gets one verdict: how it would merge two is not
+ * measured. Both read the one payload, which the command keeps in a variable.
+ * The verdict is the veto's: for a call that starts no subagent it answers the
+ * allow the fallback spells, which is the stdout asserted here. The veto has
+ * its own suite (subagent.test.mjs).
+ */
+const ANTIGRAVITY_VETO_CHAIN =
+  /^payload=\$\(cat\); printf '%s' "\$payload" \| (hooks\/[a-z-]+\.sh); printf '%s' "\$payload" \| hooks\/veto-subagent\.sh antigravity \|\| printf '(.*)'$/
+
+/** The subagent veto is no report: subagent.test.mjs runs its registrations. */
+const VETO_SCRIPT = 'veto-subagent.sh'
+
 
 function registrations() {
   const out = []
@@ -189,6 +209,7 @@ function registrations() {
     for (const [event, groups] of Object.entries(events)) {
       for (const group of groups) {
         for (const hook of hooksIn(group)) {
+          if (hook.command.includes(VETO_SCRIPT) && !ANTIGRAVITY_VETO_CHAIN.test(hook.command)) continue
           const script = Object.keys(SCRIPTS).find((s) => hook.command.includes(s))
           assert.ok(script, `unknown script in ${file}: ${hook.command}`)
           const command = hook.command.split(PLUGIN_ROOT_PLACEHOLDER).join(SPACED_ROOT)
@@ -201,6 +222,7 @@ function registrations() {
             command,
             pluginRoot,
             stdout,
+            report,
             script,
             endpoint: SCRIPTS[script],
             argument: report.trim().split(/\s+/).slice(1).join(' '),
@@ -480,9 +502,12 @@ test("Codex's registration runs every hook through the wrapper on Windows", () =
   assert.ok(hooks.length > 0)
   for (const hook of hooks) {
     assert.ok(hook.commandWindows, `no commandWindows for ${hook.command}`)
+    // The veto's answer is on stdout, which win-run.cmd drops: win-veto.cmd
+    // keeps it.
+    const wrapper = hook.command.includes(VETO_SCRIPT) ? 'win-veto.cmd' : 'win-run.cmd'
     assert.equal(
       hook.commandWindows,
-      `"\${CLAUDE_PLUGIN_ROOT}/hooks/win-run.cmd" ${hook.command}`,
+      `"\${CLAUDE_PLUGIN_ROOT}/hooks/${wrapper}" ${hook.command}`,
       `commandWindows must wrap the command unchanged: ${hook.command}`,
     )
   }
@@ -502,7 +527,7 @@ test("Antigravity's registration reaches for no plugin root", () => {
   )
   for (const r of REGISTRATIONS.filter((r) => r.provider === 'antigravity')) {
     assert.match(
-      r.command,
+      r.report,
       /^hooks\/[a-z-]+\.sh\b/,
       `command must be relative to the plugin root: ${r.command}`,
     )
@@ -512,9 +537,10 @@ test("Antigravity's registration reaches for no plugin root", () => {
 // Antigravity reads a JSON object off the hook's stdout and acts on it, so
 // silence is not the neutral answer it is everywhere else: `decision` is
 // required on PreToolUse, and an unanswered tool call is a turn this plugin
-// interfered with. The shared scripts stay silent — Codex reads their stdout as
+// interfered with. The report scripts stay silent — Codex reads their stdout as
 // an answer to a permission request — so the verdict belongs to the
-// registration, and every handler carries one.
+// registration, and every handler carries one; on PreToolUse it is the subagent
+// veto's, chained after the tool report.
 const ANTIGRAVITY_VERDICT = {
   // Let the tool run: this is an observation, never a gate.
   PreToolUse: '{"decision":"allow"}',

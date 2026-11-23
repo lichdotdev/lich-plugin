@@ -31,10 +31,7 @@ The line reads `lich: 1 task out, 1 answer to collect`. With all three lists
 empty the piece is gone.
 
 The mods share one lich line, built by `hooks/status-line.js`: the errands,
-then the worker count of [agent-cards.md](agent-cards.md), then the note of
-[edit-guard.md](edit-guard.md), joined by ` · `. While the errands show, the
-worker count is left out: every worker that mod opens is an errand of this
-session, so `open` already counts it. The line is drawn dim among the mode
+then the note of [edit-guard.md](edit-guard.md), joined by ` · `. The line is drawn dim among the mode
 labels at the right of the prompt footer, by a `ui.render` hook on
 `SessionMode` that adds it after Claude Code's own labels. `$.ui.status` is
 not used: Claude Code draws it as a yellow warning under the prompt, and keeps

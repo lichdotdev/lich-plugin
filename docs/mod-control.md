@@ -20,8 +20,8 @@ applies the commands that come back, and acks each one.
 A Claude Code mod is a module Claude Code runs inside its own process, listed
 under `modules` in the same `hooks/hooks.json` that registers the scripts. Both
 kinds live in one file and both fire. Claude Code takes one entry there, so the
-entry is `hooks/lich.js`, which registers this module and
-[agent-cards](agent-cards.md). lich refuses to queue a command for a
+entry is `hooks/lich.js`, which registers this module and the other mods.
+lich refuses to queue a command for a
 session whose mod is not polling, so on every other harness `lich control` and
 `control_session` fail at once, naming what to fix, instead of waiting on
 nothing.

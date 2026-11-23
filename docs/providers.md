@@ -5,12 +5,8 @@ lich drives an agent CLI inside a PTY and injects the same three variables
 [hook contracts](https://github.com/lichdotdev/lich/blob/main/docs/hooks/README.md)
 are therefore provider-agnostic: what changes per provider is only *how the
 harness registers hooks* and *what its lifecycle events are called*. A Claude
-Code session also carries `LICH_BIN`; `LICH_SUBAGENT_DEPTH`, how many
-`--subagent` levels down the session was opened (`0` for one nobody opened as a
-worker); and `LICH_SUBAGENT_CARDS=off` when "Subagents as lich sessions" is off
-in lich's Settings › Providers › Claude Code, or in a worker at lich's depth
-limit. The agent-cards mod ([agent-cards.md](agent-cards.md)) reads all three,
-and the worker-answer mod ([mod-answer.md](mod-answer.md)) the last two.
+Code session also carries `LICH_BIN`, which the mods that drive the lich CLI
+read.
 
 This repository is one plugin, packaged for each harness it supports:
 
@@ -25,15 +21,15 @@ This repository is one plugin, packaged for each harness it supports:
 | `hooks/codex-hooks.json`        | Codex       | hook registration             |
 | `hooks.json`                    | Antigravity | hook registration, name and place both fixed |
 | `hooks/crush-hooks.json`        | Crush       | hook registration, merged by hand |
-| `hooks/*.sh`                    | the four    | the reports themselves        |
+| `hooks/report-*.sh`             | the four    | the reports themselves        |
+| `hooks/veto-subagent.sh`        | the four, Kiro CLI | the subagent veto ([subagent-cards.md](subagent-cards.md)) |
 | `hooks/win-run.cmd`             | Codex       | runs a script on Windows      |
+| `hooks/win-veto.cmd`            | Codex       | runs the veto on Windows, keeping its stdout |
 | `hooks/lich.js`                 | Claude Code | the one module `hooks/hooks.json` names under `modules`; registers the mods below |
 | `hooks/mod-control.js`          | Claude Code | the mod-control client, a mod |
-| `hooks/agent-cards.js`          | Claude Code | runs a general-purpose subagent as a lich session, a mod |
 | `hooks/mod-usage.js`            | Claude Code | the mod-usage client, a mod |
 | `hooks/mod-status.js`           | Claude Code | the mod-status client, a mod |
 | `hooks/edit-guard.js`           | Claude Code | names the other lich session that edited a file, a mod |
-| `hooks/worker-answer.js`        | Claude Code | the mod-answer client: a worker's last message answers its task, a mod |
 | `hooks/mod-compacting.js`       | Claude Code | the session-state `compacting` report, a mod |
 | `hooks/self-command.js`         | Claude Code | runs a built-in slash command the user asked the session for, a mod |
 | `opencode/lich.js`              | opencode    | the whole client, as a module |
@@ -151,7 +147,9 @@ waits.
   script and the same argument to that wrapper, which looks for Git Bash — on
   `PATH`, then at its default install — and always exits 0, bash or no bash.
   Codex picks `commandWindows` over `command` on Windows and ignores it
-  everywhere else, so one registration still serves both.
+  everywhere else, so one registration still serves both. The subagent veto
+  goes through `hooks/win-veto.cmd` instead, which keeps the script's stdout:
+  that is where the veto rides, and `win-run.cmd` drops it.
 
 ## opencode specifics
 
@@ -255,7 +253,9 @@ listener. 17.x moves fast — re-measure before trusting a name.
   down to the stdin payload and the exit codes, so the scripts run unchanged —
   but with nothing that fires at the end of a turn, only two of the four reports
   can be honest. Crush reports its session id and refreshes git status; it shows
-  no spinner, no check, no bell, and keeps the card's own name.
+  no spinner, no check, no bell, and keeps the card's own name. Its `agent`
+  calls go through the subagent veto ([subagent-cards.md](subagent-cards.md)),
+  which needs no end of turn.
 - **`busy` is deliberately not registered.** A `busy` with no `Stop` behind it
   would pin a spinner to the card until the next turn — wrong for longer than it
   is right. The day Crush ships an end-of-turn event, `report-state.sh` and
@@ -302,8 +302,11 @@ against a stub listener — not off a name that reads plausibly.
   where `continue` refuses to let the loop end. Silence is not the neutral
   answer it is on every other harness, so the registration appends the verdict
   the event asks for — `{"decision":"allow"}` before a tool, `{"decision":""}` on
-  `Stop`, `{}` elsewhere. The scripts stay silent, because on Codex their stdout
-  would answer a permission request instead.
+  `Stop`, `{}` elsewhere. The report scripts stay silent, because on Codex their
+  stdout would answer a permission request instead. Before a tool the verdict is
+  the subagent veto's, which runs after the tool report in the same command and
+  prints `allow` for every tool but a vetoed `invoke_subagent`
+  ([subagent-cards.md](subagent-cards.md)).
 - **Payloads are camelCase** (protojson): `conversationId` is the session id,
   `workspacePaths[0]` the session's directory, `transcriptPath` the JSONL log.
   Tool calls arrive as `toolCall.name` with PascalCase arguments under

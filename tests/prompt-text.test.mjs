@@ -9,7 +9,6 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { en, ptBR, zhCN, es, ja, ko, ru, say, promptLang } from '../hooks/prompt-text.js'
-import { register as registerAgentCards } from '../hooks/agent-cards.js'
 import { register as registerEditGuard } from '../hooks/edit-guard.js'
 import { register as registerSelfCommand } from '../hooks/self-command.js'
 import { register as registerModControl } from '../hooks/mod-control.js'
@@ -44,8 +43,8 @@ test('names that must stay literal are kept in every translation', () => {
 })
 
 test('an unknown or absent language says the English text', () => {
-  for (const lang of [undefined, '', 'fr', 'PT-br']) assert.equal(say(lang, 'lichExited', { code: 2 }), 'lich exited 2')
-  assert.equal(say('pt-BR', 'lichExited', { code: 2 }), 'o lich saiu com 2')
+  for (const lang of [undefined, '', 'fr', 'PT-br']) assert.equal(say(lang, 'editNoteAgo', { minutes: 2 }), '2 min ago')
+  assert.equal(say('pt-BR', 'editNoteAgo', { minutes: 2 }), 'há 2 min')
 })
 
 test('a key no catalog has is an error, not an empty text', () => {
@@ -75,68 +74,6 @@ function hooksOf(register) {
 
 const pass = (value) => async () => value
 const exits = (code, stdout = '', stderr = '') => ({ exitCode: code, stdout, stderr })
-
-// Beneath an Agent call it allowed, Claude Code raises `agent.spawn` before the
-// native agent starts (measured on 2.1.296), which is where the mod opens lich.
-const allowedAgent = (hooks, $) => {
-  const signal = new AbortController().signal
-  const spawn = async (e) => {
-    const spawned = await hooks.get('agent.spawn')($, { tool_use_id: e.tool_use_id }, Object.assign(pass({ model: 'm' }), { signal }))
-    return spawned.deny === undefined ? { result: 'native' } : { result: `Error: ${spawned.deny}`, isError: true }
-  }
-  return Object.assign(spawn, { origin: { plugin: 'engine' }, signal })
-}
-
-test('agent-cards: the background note, the completed addendum and the denies speak pt-BR', async () => {
-  const OPENED = { name: 'w-1', label: 'w', path: '/wt/w', id: 'x' }
-  const env = { ...PT, LICH_BIN: '/lich', LICH_SESSION_ID: 'lich-1' }
-  const call = async (status, { stderr = '' } = {}) => {
-    const hooks = hooksOf(registerAgentCards)
-    const runs = [exits(2, JSON.stringify({ ...OPENED, delivery: { ticket: 't', target: 'w', status, answer: 'feito' } }), stderr)]
-    const $ = {
-      env: { get: async (n) => env[n] },
-      clock: { now: async () => 0, after: () => ({ cancel() {} }) },
-      process: { run: async () => runs.shift() },
-      ui: { toast() {}, invalidate() {} },
-    }
-    await hooks.get('session.start')($, { isInteractive: true }, async (x) => x)
-    const e = { tool: 'Agent', tool_use_id: 't1', description: 'd', prompt: 'p', subagent_type: 'general-purpose' }
-    return hooks.get('tool.call Agent')($, e, allowedAgent(hooks, $))
-  }
-
-  const background = await call('pending')
-  assert.match(background.context[0], /^O agente roda como a sessão lich "w", neste mesmo checkout, \/wt\/w/)
-  assert.match(background.context[0], /<lich-notification kind="worker-finished">.*wait_for_answer.*SendMessage.*send_to_session ou lich send/)
-
-  const done = await call('answered')
-  assert.match(done.result.content[0].text, /^feito\n\nO trabalho está neste mesmo checkout, \/wt\/w \(sessão lich "w"\)\./)
-
-  assert.equal((await call('unread')).deny, 'a tarefa nunca chegou a "w" (unread): abra o card dela.')
-})
-
-test('agent-cards: TaskStop failure speaks pt-BR, the success message stays Claude Code\'s own wording', async () => {
-  const env = { ...PT, LICH_BIN: '/lich', LICH_SESSION_ID: 'lich-1' }
-  const hooks = hooksOf(registerAgentCards)
-  const runs = [
-    exits(2, JSON.stringify({ name: 'w-1', label: 'w', path: '/w', delivery: { ticket: 't', target: 'w', status: 'pending', answer: '' } })),
-    exits(1, '', 'boom'),
-    exits(0, 'ok'),
-  ]
-  const $ = {
-    env: { get: async (n) => env[n] },
-    clock: { now: async () => 0, after: () => ({ cancel() {} }) },
-    process: { run: async () => runs.shift() },
-    ui: { toast() {}, invalidate() {} },
-  }
-  await hooks.get('session.start')($, { isInteractive: true }, async (x) => x)
-  const next = Object.assign(pass({ result: 'native' }), { origin: { plugin: 'engine' }, signal: new AbortController().signal })
-  await hooks.get('tool.call Agent')($, { tool: 'Agent', tool_use_id: 't1', description: 'd', prompt: 'p', subagent_type: 'general-purpose' }, allowedAgent(hooks, $))
-
-  const failed = await hooks.get('tool.call TaskStop')($, { tool: 'TaskStop', task_id: 'w-1' }, next)
-  assert.equal(failed.deny, 'o lich não conseguiu parar "w": boom')
-  const stopped = await hooks.get('tool.call TaskStop')($, { tool: 'TaskStop', task_id: 'w-1' }, next)
-  assert.equal(stopped.result.message, 'Successfully stopped task: w-1 (d)')
-})
 
 test('edit-guard: the note about another session speaks pt-BR', async () => {
   const MIN = 60_000
@@ -243,7 +180,7 @@ for (const [tag, catalog] of Object.entries(NEW_LOCALES)) {
 
   test(`${tag}: LICH_PROMPT_LANG selects the catalog`, () => {
     assert.equal(promptLang(tag), tag)
-    assert.notEqual(say(tag, 'lichExited', { code: 2 }), 'lich exited 2')
+    assert.notEqual(say(tag, 'editNoteAgo', { minutes: 2 }), '2 min ago')
   })
 }
 
@@ -251,10 +188,6 @@ for (const [tag, catalog] of Object.entries(NEW_LOCALES)) {
 // way the pt-BR tests above drive it, with only the language swapped.
 const EXPECTED = {
   'zh-CN': {
-    background: /^agent 作为 lich 会话 "w" 运行，在同一个 checkout \/wt\/w 中/,
-    done: /^feito\n\n工作位于同一个 checkout \/wt\/w（lich 会话 "w"）中。/,
-    deny: '任务从未送达 "w"（unread）：请打开它的卡片。',
-    stop: 'lich 无法停止 "w"：boom',
     edit: /^\/r\/a\.js 也被 lich 会话 lich-a 在 2026-10-05T12:00:00\.000Z（3 分钟前）编辑过/,
     skill: /^base\n\n在此会话中，内置斜杠命令/,
     control: /传入 session "lich-1"。/,
@@ -263,10 +196,6 @@ const EXPECTED = {
     ask: /^这是在你的回合之外/,
   },
   es: {
-    background: /^El agente se ejecuta como la sesión lich "w", en este mismo checkout, \/wt\/w/,
-    done: /^feito\n\nEl trabajo está en este mismo checkout, \/wt\/w \(sesión lich "w"\)\./,
-    deny: 'la tarea nunca llegó a "w" (unread): abre su tarjeta.',
-    stop: 'lich no pudo detener "w": boom',
     edit: /^\/r\/a\.js también fue editado por la sesión lich lich-a en 2026-10-05T12:00:00\.000Z \(hace 3 min\)/,
     skill: /^base\n\nEn esta sesión, un slash command integrado/,
     control: /pasa session "lich-1"\./,
@@ -275,10 +204,6 @@ const EXPECTED = {
     ask: /^Esta es una pregunta lateral hecha desde fuera de tu turno/,
   },
   ja: {
-    background: /^エージェントは lich セッション "w" として動いています（同じこのチェックアウト \/wt\/w で/,
-    done: /^feito\n\n作業は同じこのチェックアウト \/wt\/w にあります（lich セッション "w"）。/,
-    deny: 'タスクは "w" に届きませんでした（unread）：そのカードを開いてください。',
-    stop: 'lich は "w" を停止できませんでした：boom',
     edit: /^\/r\/a\.js は lich セッション lich-a によっても 2026-10-05T12:00:00\.000Z（3 分前）に編集されています/,
     skill: /^base\n\nこのセッションでは、ユーザーが実行を求めたときに、組み込みのスラッシュコマンド/,
     control: /session に "lich-1" を渡してください。/,
@@ -287,10 +212,6 @@ const EXPECTED = {
     ask: /^これは、あなたが作業している間にターンの外から尋ねられた横からの質問です/,
   },
   ko: {
-    background: /^에이전트는 lich 세션 "w"에서 실행됩니다\(같은 체크아웃 \/wt\/w, 당신처럼 그 파일을 수정함\)\./,
-    done: /^feito\n\n작업은 같은 체크아웃 \/wt\/w에 있습니다\(lich 세션 "w"\)\./,
-    deny: '작업이 "w"에 한 번도 전달되지 않았습니다(unread): 그 카드를 열어 보세요.',
-    stop: 'lich가 "w"을(를) 멈추지 못했습니다: boom',
     edit: /^\/r\/a\.js은\(는\) lich 세션 lich-a도 2026-10-05T12:00:00\.000Z\(3분 전\)에 수정했습니다/,
     skill: /^base\n\n이 세션에서는 사용자가 실행을 요청하면 내장 슬래시 명령/,
     control: /session에 "lich-1"를 전달하세요\./,
@@ -299,10 +220,6 @@ const EXPECTED = {
     ask: /^이것은 당신이 작업하는 동안 턴 밖에서 들어온 곁가지 질문입니다/,
   },
   ru: {
-    background: /^Агент работает как сессия lich "w", в этой же рабочей копии, \/wt\/w/,
-    done: /^feito\n\nРабота находится в этой же рабочей копии, \/wt\/w \(сессия lich "w"\)\./,
-    deny: 'задача так и не дошла до "w" (unread): откройте её карточку.',
-    stop: 'lich не смог остановить "w": boom',
     edit: /^\/r\/a\.js также редактировала сессия lich lich-a в 2026-10-05T12:00:00\.000Z \(3 мин назад\)/,
     skill: /^base\n\nВ этой сессии здесь также можно назвать встроенную slash-команду/,
     control: /передайте session "lich-1"\./,
@@ -314,35 +231,6 @@ const EXPECTED = {
 
 for (const [tag, want] of Object.entries(EXPECTED)) {
   const LANG = { LICH_PROMPT_LANG: tag }
-
-  test(`${tag}: agent-cards renders the background note, the completed addendum and the denies`, async () => {
-    const OPENED = { name: 'w-1', label: 'w', path: '/wt/w', id: 'x' }
-    const env = { ...LANG, LICH_BIN: '/lich', LICH_SESSION_ID: 'lich-1' }
-    const call = async (status, tool = 'Agent', stderr = '') => {
-      const hooks = hooksOf(registerAgentCards)
-      const runs = [
-        exits(2, JSON.stringify({ ...OPENED, delivery: { ticket: 't', target: 'w', status, answer: 'feito' } })),
-        exits(1, '', 'boom'),
-      ]
-      const $ = {
-        env: { get: async (n) => env[n] },
-        clock: { now: async () => 0, after: () => ({ cancel() {} }) },
-        process: { run: async () => runs.shift() },
-        ui: { toast() {}, invalidate() {} },
-      }
-      await hooks.get('session.start')($, { isInteractive: true }, async (x) => x)
-      const next = Object.assign(pass({ result: 'native' }), { origin: { plugin: 'engine' }, signal: new AbortController().signal })
-      const e = { tool: 'Agent', tool_use_id: 't1', description: 'd', prompt: 'p', subagent_type: 'general-purpose' }
-      const first = await hooks.get('tool.call Agent')($, e, allowedAgent(hooks, $))
-      if (tool === 'Agent') return first
-      return hooks.get('tool.call TaskStop')($, { tool: 'TaskStop', task_id: 'w-1' }, next)
-    }
-
-    assert.match((await call('pending')).context[0], want.background)
-    assert.match((await call('answered')).result.content[0].text, want.done)
-    assert.equal((await call('unread')).deny, want.deny)
-    assert.equal((await call('pending', 'TaskStop')).deny, want.stop)
-  })
 
   test(`${tag}: edit-guard renders the note about another session`, async () => {
     const T0 = Date.parse('2026-10-05T12:00:00.000Z')
