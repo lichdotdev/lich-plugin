@@ -15,6 +15,11 @@
         "type": "command",
         "command": "hooks/report-title.sh once; printf '{}'",
         "timeout": 5
+      },
+      {
+        "type": "command",
+        "command": "hooks/report-touched.sh collect",
+        "timeout": 5
       }
     ],
     "PreToolUse": [
@@ -31,11 +36,11 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "write_to_file|replace_file_content|run_command",
+        "matcher": "write_file|edit_file|write_to_file|replace_file_content|run_command",
         "hooks": [
           {
             "type": "command",
-            "command": "hooks/report-touched.sh; printf '{}'",
+            "command": "hooks/report-touched.sh hold; printf '{}'",
             "timeout": 5
           }
         ]

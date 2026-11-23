@@ -37,8 +37,6 @@ export const FIXTURE_OF = {
   '/session-start': 'session-start',
   '/session-title': 'session-title',
   '/session-touched': 'session-touched',
-  '/mod/acks': 'mod-control',
-  '/mod/usage': 'mod-usage',
   '/subagent': 'subagent-cards',
 }
 
@@ -59,7 +57,6 @@ export const rejected = (endpoint) => CASES[endpoint].filter((c) => c.reject)
 // state or a provider that lich stops accepting stops being accepted below too.
 export const STATES = new Set(accepted('/hook').map((c) => c.accept.state))
 export const PROVIDERS = new Set(accepted('/session-start').map((c) => c.accept.provider))
-export const MOD_KINDS = new Set(accepted('/mod/acks').map((c) => c.body.kind))
 export const SUBAGENT_CALLS = new Set(accepted('/subagent').map((c) => c.body.call).filter(Boolean))
 
 /**
@@ -117,22 +114,11 @@ export const REJECT_RULES = {
   '/session-touched': {
     'missing session_id': (b) => !('session_id' in b),
     'empty session_id': (b) => b.session_id === '',
-    'malformed json': (b, raw) => !isJsonObject(raw),
-  },
-  '/mod/usage': {
-    'missing session_id': (b) => !('session_id' in b),
-    'missing conversation_id': (b) => !('conversation_id' in b),
-    'missing context': (b) => !isObject(b.context),
-    'zero window': (b) => isObject(b.context) && !(b.context.window > 0),
-    'negative tokens': (b) => isObject(b.context) && b.context.tokens < 0,
-    'percent past 100': (b) => isObject(b.context) && b.context.percent > 100,
-    'fractional percent': (b) =>
-      isObject(b.context) && 'percent' in b.context && !Number.isInteger(b.context.percent),
-    'rate limit without kind': (b) => (b.rate_limits ?? []).some((l) => blank(l.kind)),
-    'negative rate limit': (b) => (b.rate_limits ?? []).some((l) => l.percent_used < 0),
-    'reset that is not a timestamp': (b) =>
-      (b.rate_limits ?? []).some((l) => 'resets_at' in l && Number.isNaN(Date.parse(l.resets_at))),
-    'negative cost': (b) => b.cost_usd < 0,
+    'an empty path': (b) => Array.isArray(b.paths) && b.paths.some((p) => p === ''),
+    'paths that are not a list': (b) =>
+      'paths' in b && !(Array.isArray(b.paths) && b.paths.every((p) => typeof p === 'string')),
+    'a collect naming paths': (b) => b.collect === true && 'paths' in b,
+    'a collect that holds': (b) => b.collect === true && 'hold' in b,
     'malformed json': (b, raw) => !isJsonObject(raw),
   },
   '/subagent': {
@@ -144,16 +130,6 @@ export const REJECT_RULES = {
     'no session id': (b) => !('session_id' in b),
     'no tool': (b) => blank(b.tool),
     'not JSON': (b, raw) => !isJsonObject(raw),
-  },
-  '/mod/acks': {
-    'missing session_id': (b) => !('session_id' in b),
-    'missing id': (b) => !('id' in b),
-    'missing kind': (b) => !('kind' in b),
-    'unknown kind': (b) => 'kind' in b && !MOD_KINDS.has(b.kind),
-    'ok is not a bool': (b) => 'ok' in b && typeof b.ok !== 'boolean',
-    'answer on another kind': (b) => 'answer' in b && b.kind !== 'ask',
-    'answer on a failed ask': (b) => 'answer' in b && b.kind === 'ask' && b.ok !== true,
-    'malformed json': (b, raw) => !isJsonObject(raw),
   },
 }
 
@@ -320,23 +296,3 @@ export const lichEnv = (port) => ({
   LICH_TOKEN: TOKEN,
   LICH_SESSION_ID,
 })
-
-// ------------------------------------------------------------ status line --
-
-import { register as registerStatusLine } from '../hooks/status-line.js'
-
-let drawFooter
-registerStatusLine((event, matcher, hook) => {
-  drawFooter = hook
-})
-
-/**
- * The lich line the footer draws now, as Claude Code would draw it with no
- * mode of its own on; undefined when it draws none. A fake engine calls it
- * from `$.ui.invalidate`, where a mod asks for the redraw.
- */
-export function footerLine() {
-  const e = { surface: 'terminal', component: 'SessionMode', requestId: 'footer', props: { modes: [] } }
-  const drawn = drawFooter({}, e, (next) => next)
-  return drawn.props.modes.at(-1)
-}

@@ -4,10 +4,11 @@
 // opencode loads a module rather than running a script, so this one file plays
 // the part the hooks/*.sh scripts play on the other harnesses. Same transport,
 // same payloads, same rule: outside lich it is a no-op, and it never fails the
-// user's turn. It blocks in one place, a `task` call waiting on lich's veto
-// (vetoReason, below), because there the answer is the decision.
+// user's turn. It blocks in two places, because there the answer is what the
+// model reads: a `task` call waiting on lich's veto (vetoReason), and a write
+// waiting on lich's edit note (touchedNote), both below.
 
-// Fire and forget. No report is awaited: opencode awaits its hooks, so a
+// Fire and forget. No report is awaited but two: opencode awaits its hooks, so a
 // slow or dead listener would sit in front of the agent's next step. The
 // environment is read per report rather than at import, so a module loaded
 // outside lich stays a no-op instead of a cached decision.
@@ -59,6 +60,50 @@ async function vetoReason(body) {
 }
 
 const text = (value) => (typeof value === "string" ? value : "")
+
+// The files a write touched go to lich, which answers with a note when another
+// session wrote one of them minutes ago (docs/session-touched.md). The note is
+// lich's, handed to the model as the tool's result goes back, so the request is
+// awaited, a second at most like every report. Every failure says nothing.
+async function touchedNote(paths) {
+  const port = process.env.LICH_PORT
+  const token = process.env.LICH_TOKEN
+  const session = process.env.LICH_SESSION_ID
+  if (!port || !token || !session) return undefined
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/session-touched?token=${token}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-lich-plugin": PLUGIN_VERSION },
+      body: JSON.stringify({ session_id: session, ...(paths.length > 0 ? { paths } : {}) }),
+      signal: AbortSignal.timeout(1000),
+    })
+    if (res.status !== 200) return undefined
+    const answer = await res.json()
+    return typeof answer?.note === "string" && answer.note !== "" ? answer.note : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** The absolute paths among `candidates`, each once, in order. */
+function absolutePaths(candidates) {
+  return [...new Set(candidates.filter((p) => typeof p === "string" && p.startsWith("/")))]
+}
+
+// The tools that write, and where each names its files: `apply_patch` in its
+// metadata, `write` and `edit` in their arguments (measured on 1.19.4, the
+// first with GPT models, the other two with DeepSeek). `bash` names none and
+// is only the refresh. `file.edited` is not reported: it fires before the
+// same write's `tool.execute.after`, so the one edit would go twice.
+const WRITERS = new Set(["write", "edit", "apply_patch", "bash"])
+
+function writtenPaths(input, output) {
+  if (input.tool === "apply_patch") {
+    const files = output?.metadata?.files
+    return absolutePaths(Array.isArray(files) ? files.map((f) => f?.filePath) : [])
+  }
+  return absolutePaths([input.args?.filePath])
+}
 
 // The `task` call as lich's /subagent body, or undefined when lich would refuse
 // it for want of a prompt, which leaves it native without asking. Field names
@@ -581,9 +626,6 @@ export const LichPlugin = async ({ $ } = {}, helper) => {
           }
           return
         }
-        case "file.edited":
-          report("session-touched", {})
-          return
         default:
           // Anything opencode *asked* the user is "your turn": a permission and
           // a question today, each in two spellings (`permission.asked`,
@@ -600,8 +642,8 @@ export const LichPlugin = async ({ $ } = {}, helper) => {
       }
     },
 
-    // The tool line on the card, and lich's say on a `task` call. `file.edited`
-    // above already covers the touched report. A sub-session's `task` is still
+    // The tool line on the card, and lich's say on a `task` call. A
+    // sub-session's `task` is still
     // asked about, as nested, and lich leaves it native. A deny is thrown: that
     // is how opencode refuses a call, and the model reads the message.
     "tool.execute.before": async (input, output) => {
@@ -619,6 +661,15 @@ export const LichPlugin = async ({ $ } = {}, helper) => {
       const body = subagentBody(input, output?.args, nested)
       const reason = body && (await vetoReason(body))
       if (reason) throw new Error(reason)
+    },
+
+    // A write's files go to lich, and its note, when lich has one, is appended
+    // to the tool's output, which is what the model reads. A sub-session's
+    // write is the card's too: it edits the same checkout.
+    "tool.execute.after": async (input, output) => {
+      if (!WRITERS.has(input?.tool)) return
+      const note = await touchedNote(writtenPaths(input, output))
+      if (note && typeof output?.output === "string") output.output += `\n\n${note}`
     },
 
     // Absent outside lich, and absent when the helper cannot be imported: the

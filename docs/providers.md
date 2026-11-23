@@ -4,9 +4,7 @@ lich drives an agent CLI inside a PTY and injects the same three variables
 (`LICH_PORT`, `LICH_TOKEN`, `LICH_SESSION_ID`) into every one it spawns. The
 [hook contracts](https://github.com/lichdotdev/lich/blob/main/docs/hooks/README.md)
 are therefore provider-agnostic: what changes per provider is only *how the
-harness registers hooks* and *what its lifecycle events are called*. A Claude
-Code session also carries `LICH_BIN`, which the mods that drive the lich CLI
-read.
+harness registers hooks* and *what its lifecycle events are called*.
 
 This repository is one plugin, packaged for each harness it supports:
 
@@ -24,14 +22,7 @@ This repository is one plugin, packaged for each harness it supports:
 | `hooks/report-*.sh`             | the four    | the reports themselves        |
 | `hooks/veto-subagent.sh`        | the four, Kiro CLI | the subagent veto ([subagent-cards.md](subagent-cards.md)) |
 | `hooks/win-run.cmd`             | Codex       | runs a script on Windows      |
-| `hooks/win-veto.cmd`            | Codex       | runs the veto on Windows, keeping its stdout |
-| `hooks/lich.js`                 | Claude Code | the one module `hooks/hooks.json` names under `modules`; registers the mods below |
-| `hooks/mod-control.js`          | Claude Code | the mod-control client, a mod |
-| `hooks/mod-usage.js`            | Claude Code | the mod-usage client, a mod |
-| `hooks/mod-status.js`           | Claude Code | the mod-status client, a mod |
-| `hooks/edit-guard.js`           | Claude Code | names the other lich session that edited a file, a mod |
-| `hooks/mod-compacting.js`       | Claude Code | the session-state `compacting` report, a mod |
-| `hooks/self-command.js`         | Claude Code | runs a built-in slash command the user asked the session for, a mod |
+| `hooks/win-veto.cmd`            | Codex       | runs a hook whose stdout is an answer (the veto, the edit note) on Windows, keeping it |
 | `opencode/lich.js`              | opencode    | the whole client, as a module |
 | `omp/lich.js`                   | omp         | the whole client, as a module |
 | `skills/`                       | all         | skills, same layout           |
@@ -75,10 +66,9 @@ swallows its own errors and never awaits a report.
 | `busy` + tool       | `PreToolUse`                 | `PreToolUse`                 | `PreToolUse`                 | `tool.execute.before`     | `tool_call`              | —                           |
 | `waiting` + reason  | `Notification`               | `PermissionRequest`          | — (not measured)             | any `*.asked`             | — (see below)            | —                           |
 | `done`              | `Stop`, `StopFailure`        | `Stop`                       | `Stop`                       | `session.status` (`idle`) | `session_stop`           | —                           |
-| `compacting`        | `session.compact` (a mod)    | —                            | —                            | —                         | —                        | —                           |
 | title               | `Stop`                       | `Stop`                       | `Stop`                       | `session.updated`         | `session_stop`, `turn_start` | —                       |
 | `idle`              | `SessionEnd`                 | — (registered, never fires)  | — (never fires)              | — (nothing outlives it)   | — (nothing outlives it)  | —                           |
-| touched             | `PostToolUse` (write tools)  | `PostToolUse` (write tools)  | `PostToolUse` (write tools)  | `file.edited`             | `tool_result` (write tools) | `PreToolUse` (write tools) |
+| touched             | `PostToolUse` (write tools)  | `PostToolUse` (write tools)  | `PostToolUse` (write tools, `hold`), `PreInvocation` (`collect`) | `tool.execute.after` (write tools) | `tool_result` (write tools) | `PostToolUse` (write tools; `PreToolUse` before v0.99.0) |
 
 Every cell above was taken off a real run of that harness against a stub
 listener, not off its documentation.
@@ -249,13 +239,15 @@ listener. 17.x moves fast — re-measure before trusting a name.
 
 ## Crush specifics
 
-- **One event exists: `PreToolUse`.** Crush's hooks are Claude Code-compatible
-  down to the stdin payload and the exit codes, so the scripts run unchanged —
-  but with nothing that fires at the end of a turn, only two of the four reports
-  can be honest. Crush reports its session id and refreshes git status; it shows
-  no spinner, no check, no bell, and keeps the card's own name. Its `agent`
-  calls go through the subagent veto ([subagent-cards.md](subagent-cards.md)),
-  which needs no end of turn.
+- **`PreToolUse` was its one event before v0.99.0.** Crush's hooks are Claude
+  Code-compatible down to the stdin payload and the exit codes, so the scripts
+  run unchanged. Crush reports its session id and the touched report (on
+  `PostToolUse` from v0.99.0, with its edit note; see
+  [session-touched.md](session-touched.md)); it shows no spinner, no check, no
+  bell, and keeps the card's own name. Its `agent` calls go through the subagent
+  veto ([subagent-cards.md](subagent-cards.md)), which needs no end of turn.
+  v0.100.0 documents 13 events, `TurnStart` and `TurnEnd` among them; none of
+  the state reports rides them yet, since none was measured on a real turn.
 - **`busy` is deliberately not registered.** A `busy` with no `Stop` behind it
   would pin a spinner to the card until the next turn — wrong for longer than it
   is right. The day Crush ships an end-of-turn event, `report-state.sh` and
@@ -263,9 +255,9 @@ listener. 17.x moves fast — re-measure before trusting a name.
 - **The session id arrives late.** It rides the first tool call, because that is
   the first event there is. A conversation that answers without a tool never
   reports one.
-- **The touched refresh runs one tool early**, for the same reason: `PreToolUse`
-  fires before the write, so the immediate git fetch sees the tree the tool has
-  not changed yet. What it front-runs in practice is the previous tool's write.
+- **Before v0.99.0 the touched refresh runs one tool early**, for the same
+  reason: `PreToolUse` fires before the write, so the immediate git fetch sees
+  the tree the tool has not changed yet, and there is no note.
 - **Registration is a hand-merge.** Crush has no plugin system: its hooks live in
   the user's own `crush.json`, and `command` is resolved against the working
   directory, not the config file — so a global install needs an absolute path.

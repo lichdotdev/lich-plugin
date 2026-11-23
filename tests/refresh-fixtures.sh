@@ -19,21 +19,19 @@ ref=$(tr -d '[:space:]' <"$here/lich-ref")
 raw=https://raw.githubusercontent.com/lichdotdev/lich/$ref
 base=$raw/docs/hooks/fixtures
 
-for file in session-start.jsonl session-state.jsonl session-title.jsonl \
-  session-touched.jsonl mod-usage.jsonl mod-control.jsonl \
-  mod-status.json; do
+for file in session-start.jsonl session-state.jsonl session-title.jsonl; do
   curl -fsSL "$base/$file" -o "$here/fixtures/$file"
   echo "refreshed $file at $ref"
 done
 
-# mod-commands' prompt examples became notification envelopes in lich's merge
-# commit 1f4166bf (feat/request-envelope), in no release yet, so it is read at
+# session-touched gained paths, hold, collect and the edit note in lich's merge
+# commit c62b0796 (feat/touched-edit-note), in no release yet, so it is read at
 # that commit. Once a release ships it, move tests/lich-ref to that release and
 # put the file back in the loop above.
-unreleased=1f4166bf61a4cd91ef91c7811f35fa8d17c0016a
-curl -fsSL "https://raw.githubusercontent.com/lichdotdev/lich/$unreleased/docs/hooks/fixtures/mod-commands.json" \
-  -o "$here/fixtures/mod-commands.json"
-echo "refreshed mod-commands.json at $unreleased (unreleased)"
+unreleased=c62b0796c191b66fff0eb23a6665e6ed3b2a7a83
+curl -fsSL "https://raw.githubusercontent.com/lichdotdev/lich/$unreleased/docs/hooks/fixtures/session-touched.jsonl" \
+  -o "$here/fixtures/session-touched.jsonl"
+echo "refreshed session-touched.jsonl at $unreleased (unreleased)"
 
 # subagent-cards is a contract of its own, merged in lich at d33b02a8 and in no
 # release yet, so it is read at that commit. Once a release ships it, move

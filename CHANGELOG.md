@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Needs the lich release after v0.92.0, the first that answers `/subagent` and
-sends the notification envelope. This release is a minor so that an older lich
-never installs it.
+Needs the lich release after v0.92.0, the first that answers `/subagent`, takes
+the touched report's paths and sends the notification envelope. This release is
+a minor so that an older lich never installs it.
 
 ### Added
 
@@ -27,6 +27,23 @@ never installs it.
   native is lich's call. When lich does not answer within 10 seconds, or cannot
   be reached, the native subagent runs. Codex on Windows runs the hook through
   `hooks/win-veto.cmd`, which keeps the veto `win-run.cmd` would drop.
+- **An edit says when another lich session wrote the same file minutes ago, on
+  every harness but opencode 2.** The touched report now names the files a
+  write touched, and lich answers with a note naming the other session when it
+  wrote one of them in the last ten minutes. The hook hands that note to the
+  model as written: Claude Code's and Cursor CLI's additionalContext, Codex's
+  (on Windows through `hooks/win-veto.cmd`), Crush's `context` from v0.99.0,
+  where the report moves to `PostToolUse`, opencode's tool output and oh-my-pi's
+  additionalContext. Antigravity and Kiro CLI, whose post-write hooks cannot
+  show text, hold it until their next `PreInvocation` or `userPromptSubmit`.
+  It replaces the Claude Code mod's edit guard, and the plugin writes no text
+  of its own.
+
+### Fixed
+
+- **Antigravity 1.5.15 edits refresh the card again.** It writes with
+  `write_file` and `edit_file`, which the touched matcher did not name; it now
+  names them beside the older `write_to_file` and `replace_file_content`.
 
 ### Removed
 
@@ -37,6 +54,13 @@ never installs it.
   off its final message itself. Their texts in every prompt language go with
   them, and so does the worker count in the prompt footer, which the errands
   already counted.
+- **The Claude Code mod is gone; the plugin is hooks and skills.** lich no
+  longer drives a Claude Code terminal session through it (`lich control` and
+  `ask_session` there, and its prompts delivered as a task notification), the
+  session no longer reports its own usage or a compaction, the footer line of
+  errands and the self-run `/compact` are gone, and its texts in seven prompt
+  languages with them. The edit guard became the hook above. lich's chat, which
+  drives Claude Code through stream-json, never ran the mod and loses nothing.
 
 ## [0.21.1] - 2026-11-13
 
