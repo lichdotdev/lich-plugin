@@ -24,7 +24,7 @@ allow() {
 [ -n "$LICH_PORT" ] && [ -n "$LICH_TOKEN" ] && [ -n "$LICH_SESSION_ID" ] || allow
 
 # Sent as X-Lich-Plugin on every request; bumped at release (CLAUDE.md, Release).
-plugin_version=0.22.0
+plugin_version=0.23.0
 
 # The body is built from arbitrary text and the answer read back as JSON, so
 # without jq there is nothing safe to send.
