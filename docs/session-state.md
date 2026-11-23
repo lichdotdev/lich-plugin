@@ -129,6 +129,29 @@ the turn without another tool call stays `waiting` until `Stop`. Codex recovers
 the same way: an approved request runs the tool it was asking about, and that
 tool's `PostToolUse` re-arms the spinner.
 
+## Background work
+
+A turn can end with work the agent started still running: a background
+command, or a background subagent. That turn's words are not the answer; the
+work's end starts a turn of its own, and that turn's `done` is. So the `done`
+report carries `background: true` while any such work runs, and lich answers no
+errand until a `done` arrives without it.
+
+| harness     | what says the work still runs                                          |
+|-------------|------------------------------------------------------------------------|
+| Claude Code | a `background_tasks` entry with `status` `running`, on `Stop` and `StopFailure` |
+| Antigravity | `fullyIdle: false` on `Stop`                                            |
+| the rest    | nothing: no field is sent                                               |
+
+Both are measured. Claude Code 2.1.330 lists each piece of work as
+`{type: shell|subagent, status: running}`, and sends `[]` on the turn the
+work's end starts. Antigravity 1.5.15 sent `fullyIdle: false` on the `Stop` of a
+turn that left a `sleep` running, then `fullyIdle: true` on the `Stop` of the
+turn that started when it finished. oh-my-pi needs neither: it holds its
+`session_stop` until its async work is done. Without `jq` the script matches
+`"status":"running"` or `"fullyIdle":false` anywhere in the payload instead of
+in those fields.
+
 ## Compacting
 
 No client reports `compacting`. The Claude Code mod that bracketed

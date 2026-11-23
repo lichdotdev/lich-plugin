@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Needs the lich that understands background work.
+
+### Added
+
+- **A worker's answer waits for its background work on Claude Code and
+  Antigravity.** When a turn ends with a background command or subagent still
+  running, the `done` report now says `background: true`. lich holds the
+  errand's answer and sends it at the next turn end with no work left. Claude
+  Code's `Stop` names the work in `background_tasks`; Antigravity's `Stop`
+  says `fullyIdle: false`. The other harnesses send nothing new.
+
 ## [0.22.0] - 2026-11-23
 
 Needs the lich release after v0.92.0, the first that answers `/subagent`, takes

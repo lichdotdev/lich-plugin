@@ -762,6 +762,55 @@ for (const state of ['busy', 'done', 'idle']) {
   })
 }
 
+// A turn that ends with background work still running is not the worker's
+// answer, so its `done` says so and the next one without it answers. Both
+// payloads measured: Claude Code 2.1.330's `background_tasks` (`[]` once the
+// work ends), Antigravity 1.5.15's `fullyIdle`.
+const BACKGROUND = [
+  ['claude', 'Stop', { background_tasks: [{ type: 'shell', status: 'running' }] }, true],
+  ['claude', 'Stop', { background_tasks: [{ type: 'subagent', status: 'running' }] }, true],
+  ['claude', 'Stop', { background_tasks: [] }, false],
+  ['claude', 'StopFailure', { background_tasks: [{ type: 'shell', status: 'running' }] }, true],
+  ['antigravity', 'Stop', { fullyIdle: false }, true],
+  ['antigravity', 'Stop', { fullyIdle: true }, false],
+]
+
+for (const [provider, event, fields, background] of BACKGROUND) {
+  const registration = REGISTRATIONS.find(
+    (r) => r.provider === provider && r.event === event && r.script === 'report-state.sh',
+  )
+  for (const [how, env] of [['', {}], [' without jq', { PATH: binWithout('jq') }]]) {
+    test(`${provider} ${event} ${JSON.stringify(fields)} reports background ${background}${how}`, async () => {
+      await withStub(async (stub) => {
+        const result = await runHook(registration.command, {
+          env: { ...lichEnv(stub.port), ...env },
+          stdin: JSON.stringify({ ...JSON.parse(stdinFor(registration)), ...fields }),
+          pluginRoot: registration.pluginRoot,
+        })
+        assertHookSucceeded(result, registration.stdout ?? '')
+        const { body } = assertHookHonoured('/hook', stub.requests[0])
+        assert.equal(body.state, 'done')
+        if (background) assert.equal(body.background, true)
+        else assert.ok(!('background' in body), `sent background: ${stub.requests[0].raw}`)
+        assert.equal(body.provider_session_id, PROVIDER_SESSION_ID[provider])
+      })
+    })
+  }
+}
+
+// lich drops `background` on any state but `done`, so no other one sends it.
+test('busy says nothing of the background work still running', async () => {
+  await withStub(async (stub) => {
+    const result = await runHook(`"${ROOT}/hooks/report-state.sh" busy`, {
+      env: lichEnv(stub.port),
+      stdin: JSON.stringify({ session_id: PROVIDER_SESSION_ID.claude, background_tasks: [{ type: 'shell', status: 'running' }] }),
+    })
+    assertHookSucceeded(result)
+    const { body } = assertHookHonoured('/hook', stub.requests[0])
+    assert.ok(!('background' in body), `busy sent background: ${stub.requests[0].raw}`)
+  })
+})
+
 for (const [script, argument] of [['report-state.sh', 'busy'], ['report-tool.sh', '']]) {
   const command = `"${ROOT}/hooks/${script}" ${argument}`
   test(`${script} names the conversation without jq`, async () => {

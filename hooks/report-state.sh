@@ -77,6 +77,23 @@ if [ "$state" = waiting ]; then
   fi
 fi
 
+# A turn that ends with a background command or subagent still running is not
+# the answer: the work's end starts a turn of its own, and that turn's `done` is
+# (docs/session-state.md, Background work). Claude Code lists the work in
+# `background_tasks`, Antigravity says `fullyIdle: false`; both measured, no
+# other harness names it. Without jq the match is not anchored to those fields.
+if [ "$state" = done ]; then
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$payload" | jq -e \
+      'any(.background_tasks | arrays | .[]; .status? == "running") or .fullyIdle == false' \
+      >/dev/null 2>&1 && body="${body%\}},\"background\":true}"
+  else
+    printf '%s' "$payload" | \
+      grep -Eq '"status"[[:space:]]*:[[:space:]]*"running"|"fullyIdle"[[:space:]]*:[[:space:]]*false' && \
+      body="${body%\}},\"background\":true}"
+  fi
+fi
+
 # The conversation that fired the hook, so lich can drop a report from an agent
 # CLI nested in the session (docs/session-state.md, Nested agent CLIs). An id
 # needs no escaping, and none is left out rather than sent empty.
