@@ -95,10 +95,12 @@ replays:
 - Cursor CLI, through the Claude Code install's hook: `{conversation_id,
   session_id, tool_name: "Task", tool_input, tool_use_id, ...}`, no `agent_id`;
   that hook vetoes with Claude Code's JSON in `cursor-agent -p`.
+- Codex's `PreToolUse` carries `tool_use_id`: `exec-…` for multi-agent v1's
+  `spawn_agent`, `call_…` for v2's `collaborationspawn_agent`.
+- Crush's carries `tool_use_id` too (`call_1`, against a stand-in model).
 
 Still not measured, each failing to an allow or an empty field when wrong:
 
-- `tool_use_id` on Codex and Crush payloads.
 - How oh-my-pi's `context` joins each task's prompt (here: first, a blank line
   after it).
 - `win-veto.cmd` and the file-descriptor config, on a Windows machine.
