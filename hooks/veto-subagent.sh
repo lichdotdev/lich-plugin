@@ -73,8 +73,8 @@ body=$(printf '%s' "$payload" | jq -c --arg harness "$harness" --arg sid "$LICH_
     elif $harness == "kiro" then
       if $tool == "subagent" then
         spawn([{title: ($in.stages[0].name? | s), prompt: ($in.task | s), type: ""}])
-      elif $tool == "use_subagent" and (($in.command // "InvokeSubagents") == "InvokeSubagents") then
-        spawn([($in.subagents // $in.content.subagents // [])[]? | {title: "", prompt: (.query | s), type: ""}])
+      elif $tool == "use_subagent" and $in.command == "InvokeSubagents" then
+        spawn([$in.content.subagents[]? | {title: "", prompt: (.query | s), type: ""}])
       else empty end
     elif $harness == "crush" then
       if $tool == "agent" then spawn([{title: "", prompt: ($in.prompt | s), type: ""}]) else empty end
@@ -84,20 +84,24 @@ body=$(printf '%s' "$payload" | jq -c --arg harness "$harness" --arg sid "$LICH_
   | select(.call == "wait" or .sealed == true
            or ((.tasks | length) > 0 and all(.tasks[]; .prompt | test("\\S"))))
   | {session_id: $sid, provider_session_id: $conversation, nested: $nested, tool: $tool,
-     tool_use_id: ($root.tool_use_id | s), model: "", sealed: false, isolation: "", background: false}
+     tool_use_id: ($root.tool_use_id // $root.toolCall.id | s), model: "", sealed: false, isolation: "", background: false}
     + .
 ' 2>/dev/null)
 [ -n "$body" ] || allow
 
-# The token rides a header fed through stdin, as in every report script: a
-# query string or -H would put it in curl's command line. The answer comes back
-# with its status on a last line of its own.
+# Neither the token nor the body goes in curl's command line, which every user
+# on the machine can read: the body, which carries the task, is fed on stdin and
+# the token header through a config on fd 3, both from shell builtins. The
+# answer comes back with its status on a last line of its own.
 url="http://127.0.0.1:${LICH_PORT}/subagent"
-answer=$(printf 'header = "Authorization: Bearer %s"\n' "$LICH_TOKEN" |
+answer=$(printf '%s' "$body" |
   curl -s --max-time 10 -X POST \
     -H 'Content-Type: application/json' \
     -H "X-Lich-Plugin: ${plugin_version}" \
-    -d "$body" -w '\n%{http_code}' -K - "$url" 2>/dev/null)
+    --data-binary @- -w '\n%{http_code}' -K /dev/fd/3 "$url" 2>/dev/null 3<<EOF
+header = "Authorization: Bearer ${LICH_TOKEN}"
+EOF
+)
 [ "$(printf '%s' "$answer" | tail -n 1)" = 200 ] || allow
 decision=$(printf '%s' "$answer" | sed '$d' |
   jq -c 'select(.decision == "deny" and (.reason | type) == "string" and .reason != "")' 2>/dev/null)
