@@ -7,9 +7,10 @@
 // fed a payload on stdin. So this one file plays the part the four hooks/*.sh
 // scripts play on the harnesses that do run commands, the way opencode/lich.js
 // does: same transport, same payloads, same rule — outside lich it is a no-op,
-// and it never fails the user's turn. It blocks in one place, a `task` call
-// waiting on lich's veto (vetoReason, below), because there the answer is the
-// decision.
+// and it never fails the user's turn. It blocks in two places, because there
+// the answer is what the model reads: a `task` call waiting on lich's veto
+// (vetoReason), and a write waiting on lich's edit note (touchedNote), both
+// below.
 //
 // Every event name and context method used here was measured against omp
 // v17.3.0 (@oh-my-pi/pi-coding-agent), against a stub listener, not read off
@@ -21,7 +22,7 @@
 // no package around it to resolve a shared module from — so the duplication is
 // the packaging, not an oversight.
 
-// Fire and forget. No report is awaited: omp awaits its extension handlers,
+// Fire and forget. No report is awaited but two: omp awaits its extension handlers,
 // so a slow or dead listener would sit in front of the agent's next step. The
 // environment is read per report rather than at import, so a module loaded
 // outside lich stays a no-op instead of a cached decision.
@@ -72,6 +73,35 @@ async function vetoReason(body) {
 }
 
 const text = (value) => (typeof value === "string" ? value : "")
+
+// The files a write touched go to lich, which answers with a note when another
+// session wrote one of them minutes ago (docs/session-touched.md). The note is
+// lich's, handed to the model as the tool's result goes back, so the request is
+// awaited, a second at most like every report. Every failure says nothing.
+async function touchedNote(paths) {
+  const port = process.env.LICH_PORT
+  const token = process.env.LICH_TOKEN
+  const session = process.env.LICH_SESSION_ID
+  if (!port || !token || !session) return undefined
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/session-touched?token=${token}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-lich-plugin": PLUGIN_VERSION },
+      body: JSON.stringify({ session_id: session, ...(paths.length > 0 ? { paths } : {}) }),
+      signal: AbortSignal.timeout(1000),
+    })
+    if (res.status !== 200) return undefined
+    const answer = await res.json()
+    return typeof answer?.note === "string" && answer.note !== "" ? answer.note : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** The absolute paths among `candidates`, each once, in order. */
+function absolutePaths(candidates) {
+  return [...new Set(candidates.filter((p) => typeof p === "string" && p.startsWith("/")))]
+}
 
 // The `task` call as lich's /subagent body, one task per entry of its `tasks`,
 // or undefined when lich would refuse it for want of a prompt, which leaves it
@@ -240,13 +270,17 @@ export default function lichPlugin(pi) {
   })
 
   // After the write, not before it: `tool_result` is where the tree has already
-  // changed, so the refresh lich runs sees it.
-  pi.on(
-    "tool_result",
-    safely((event) => {
-      if (WRITERS.has(event?.toolName)) report("session-touched", {})
-    }),
-  )
+  // changed, so the refresh lich runs sees it. The file is the result's
+  // absolute path (`details.resolvedPath` on `write`, `details.path` on `edit`,
+  // measured on 18.8.9), and lich's note goes back as the handler's
+  // additionalContext, which the model reads.
+  pi.on("tool_result", async (event) => {
+    try {
+      if (!WRITERS.has(event?.toolName)) return
+      const note = await touchedNote(absolutePaths([event.details?.resolvedPath ?? event.details?.path]))
+      if (note) return { additionalContext: note }
+    } catch {}
+  })
 
   // The turn settling, which is this contract's `done`. It fires even when the
   // turn ended in a provider error, so the spinner always comes off.

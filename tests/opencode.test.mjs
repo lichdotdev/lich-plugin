@@ -203,11 +203,11 @@ test('an event that only contains "asked" reports nothing', async () => {
   assert.equal(requests.length, 0, `a non-prompt raised a bell: ${requests[0]?.raw}`)
 })
 
-test('file.edited refreshes the git status', async () => {
-  const requests = await reportsFor(({ event }) => event('file.edited', { file: '/w/oc-probe.txt' }))
-  assert.equal(requests.length, 1)
-  const { body } = assertContractHonoured('/session-touched', requests[0])
-  assert.equal(body.session_id, LICH_SESSION_ID)
+// file.edited fires before the same write's tool.execute.after, which reports
+// the edit with its paths (touched.test.mjs), so it reports nothing itself.
+test('file.edited reports nothing: the write reports its own files', async () => {
+  const requests = await reportsFor(({ event }) => event('file.edited', { file: '/w/oc-probe.txt' }), { expected: 0 })
+  assert.equal(requests.length, 0)
 })
 
 test('tool.execute.before names the tool and what it acts on', async () => {

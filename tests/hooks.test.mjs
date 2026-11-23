@@ -179,6 +179,9 @@ const eventsIn = (json) => json.hooks ?? json.lich
 function splitVerdict(command) {
   const chained = command.match(ANTIGRAVITY_VETO_CHAIN)
   if (chained) return { report: chained[1], stdout: chained[2] }
+  // The collect that hands Antigravity a held edit note prints its own verdict,
+  // `{}` when lich has nothing to say, which is every answer the stub gives.
+  if (/^hooks\/report-touched\.sh collect$/.test(command)) return { report: command, stdout: '{}' }
   const m = command.match(/;\s*printf\s+'(.*)'\s*$/)
   return m
     ? { report: command.slice(0, m.index), stdout: m[1] }
@@ -502,9 +505,10 @@ test("Codex's registration runs every hook through the wrapper on Windows", () =
   assert.ok(hooks.length > 0)
   for (const hook of hooks) {
     assert.ok(hook.commandWindows, `no commandWindows for ${hook.command}`)
-    // The veto's answer is on stdout, which win-run.cmd drops: win-veto.cmd
-    // keeps it.
-    const wrapper = hook.command.includes(VETO_SCRIPT) ? 'win-veto.cmd' : 'win-run.cmd'
+    // The veto and the edit note are answers on stdout, which win-run.cmd
+    // drops: win-veto.cmd keeps it.
+    const answers = hook.command.includes(VETO_SCRIPT) || hook.command.includes('report-touched.sh')
+    const wrapper = answers ? 'win-veto.cmd' : 'win-run.cmd'
     assert.equal(
       hook.commandWindows,
       `"\${CLAUDE_PLUGIN_ROOT}/hooks/${wrapper}" ${hook.command}`,
@@ -568,8 +572,8 @@ test('every registered state argument is an accepted state', () => {
   assert.ok(sent.length > 0)
   for (const state of sent) assert.ok(STATES.has(state), `registration reports unknown state "${state}"`)
   // A harness that reports state at all wires up the whole vocabulary but
-  // `compacting`, which only Claude Code reports, from a mod
-  // (mod-compacting.test.mjs); Codex's SessionEnd never fires today, but the
+  // `compacting`, which no client reports (docs/session-state.md,
+  // Compacting); Codex's SessionEnd never fires today, but the
   // entry is deliberate. Antigravity reports busy and done. Crush reports no
   // state at all — see docs/providers.md for all three.
   const SCRIPTED_STATES = new Set([...STATES].filter((state) => state !== 'compacting'))

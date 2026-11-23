@@ -74,7 +74,7 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/report-touched.sh\"",
-            "commandWindows": "\"${CLAUDE_PLUGIN_ROOT}/hooks/win-run.cmd\" \"${CLAUDE_PLUGIN_ROOT}/hooks/report-touched.sh\"",
+            "commandWindows": "\"${CLAUDE_PLUGIN_ROOT}/hooks/win-veto.cmd\" \"${CLAUDE_PLUGIN_ROOT}/hooks/report-touched.sh\"",
             "timeout": 5
           }
         ]

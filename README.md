@@ -5,10 +5,10 @@ The agent side of the [lich](https://github.com/lichdotdev/lich) integration. li
 - **session state** — `busy`/`done` on the session card (`UserPromptSubmit`/`PreInvocation`/`Stop`)
 - **session start** — persists the agent's session id on the lich session (`SessionStart`/`PreInvocation`)
 - **session title** — names the card after the session's own title (`Stop`)
-- **session touched** — refreshes the card's git status right after file-mutating tools (`PostToolUse`)
+- **session touched** — refreshes the card's git status right after file-mutating tools, and hands the model lich's note when another session wrote the same file minutes ago (`PostToolUse`)
 - **subagent cards** — turns the agent's own subagent call into a lich session, asking lich before the tool runs (`PreToolUse`, or the module's pre-tool event)
 
-The four reports are what Claude Code, Codex, Antigravity, opencode and omp send. **Crush reports two of them** — its session id and the git-status refresh — because `PreToolUse` is the only event it has, and a state nothing can end is worse on a card than no state. **omp reports all four minus the bell**: no event of its own for "your turn" has been measured yet, so its card shows a spinner while the agent waits on you. [docs/providers.md](docs/providers.md) has the event mapping per harness.
+The four reports are what Claude Code, Codex, Antigravity, opencode and omp send. **Crush reports two of them** — its session id and the git-status refresh (on `PostToolUse` from Crush v0.99.0, with the edit note) — and no state: none of its newer turn events was measured yet, and a state nothing can end is worse on a card than no state. **omp reports all four minus the bell**: no event of its own for "your turn" has been measured yet, so its card shows a spinner while the agent waits on you. [docs/providers.md](docs/providers.md) has the event mapping per harness.
 
 On **opencode** under a lich from before it registered its MCP server there, it
 also carries the other direction: the operations lich offers a session for
@@ -16,18 +16,6 @@ driving the sessions beside it, as tools of opencode's own. A newer lich hands
 opencode that server at spawn, as it does Claude Code and Codex, and the module
 then defines none. [docs/opencode-tools.md](docs/opencode-tools.md) has the
 list and the cases where they are deliberately absent.
-
-On **Claude Code** it carries the other direction too, from lich to the session:
-a mod, a module Claude Code runs in its own process, takes the commands given
-with `lich control` or an agent's `control_session` tool (start a turn with a
-prompt, stop the running turn, override the model or the effort, run a slash
-command), answers a side question asked with `lich ask` or `ask_session` from a
-fork of the session's conversation without stopping its turn, and reports how
-each one went. It needs Claude Code 2.1.280 or later
-with mods turned on; an older one keeps every report above, and `lich control`
-refuses its session, naming what to fix.
-[docs/mod-control.md](docs/mod-control.md) has what it does and which releases
-run it. No other harness has a mod system, so none of them gets the controls.
 
 On every harness here but opencode 2, and on Kiro CLI through lich's own
 registration, the agent's **subagent call** becomes a lich session: before the
@@ -38,11 +26,11 @@ report arrives at the asking session's prompt on its own as a
 such as the read-only explorers, is lich's call, and when lich cannot be reached
 the native subagent runs. [docs/subagent-cards.md](docs/subagent-cards.md) has
 the veto per harness. Since a card shares the checkout unless the call asked
-for a worktree, an edit to a file another lich session edited in the last ten
-minutes tells the model which session it was and how to reach it
-([docs/edit-guard.md](docs/edit-guard.md)). Asked to run a built-in slash command
-such as `/compact`, the session runs it on itself once its turn ends
-([docs/self-command.md](docs/self-command.md)).
+for a worktree, the touched report names the files a write touched, and when
+another lich session wrote one of them in the last ten minutes, lich answers
+with a note naming it that the hook hands to the model; on Antigravity and Kiro
+CLI, whose post-write hooks cannot show text, it arrives before the next model
+call or with the next prompt ([docs/session-touched.md](docs/session-touched.md)).
 
 It also ships skills for the parts of lich you configure from inside a session:
 
@@ -67,12 +55,6 @@ hooks/report-session-start.sh     # session-start hook
 hooks/report-title.sh             # session-title hook
 hooks/report-touched.sh           # session-touched hook
 hooks/veto-subagent.sh            # subagent-cards hook: lich's veto on a subagent call
-hooks/lich.js                     # the Claude Code mods' entry, which registers the five below
-hooks/mod-control.js              # mod-control client, a Claude Code mod
-hooks/mod-usage.js                # mod-usage client, a Claude Code mod
-hooks/edit-guard.js               # names the other lich session that edited a file, a Claude Code mod
-hooks/mod-status.js               # mod-status client: the session's errands in the prompt footer, a Claude Code mod
-hooks/self-command.js             # runs a built-in slash command the user asked the session for, a Claude Code mod
 opencode/lich.js                  # opencode client: all four reports, the subagent veto and the seven tools, one module
 omp/lich.js                       # omp client: the reports and the subagent veto, one module
 docs/                             # client-side docs, one per contract
@@ -151,7 +133,10 @@ Crush has no plugin system either: its hooks live in your own `crush.json`. Clon
   "hooks": {
     "PreToolUse": [
       { "name": "lich session id", "command": "/home/you/src/lich-plugin/hooks/report-session-start.sh crush", "timeout": 5 },
-      { "name": "lich git-status refresh", "matcher": "^(edit|write|multiedit|bash)$", "command": "/home/you/src/lich-plugin/hooks/report-touched.sh", "timeout": 5 }
+      { "name": "lich subagent cards", "matcher": "^agent$", "command": "/home/you/src/lich-plugin/hooks/veto-subagent.sh crush", "timeout": 15 }
+    ],
+    "PostToolUse": [
+      { "name": "lich git-status refresh", "matcher": "^(edit|multiedit|write|bash)$", "command": "/home/you/src/lich-plugin/hooks/report-touched.sh", "timeout": 5 }
     ]
   }
 }
@@ -195,4 +180,4 @@ claude --plugin-dir .
 node --test tests/*.test.mjs
 ```
 
-Every hook script runs as a real subprocess, from the command line its registration spells, against a stub HTTP server — and the body it POSTs is asserted against [lich's contract fixtures](https://github.com/lichdotdev/lich/tree/main/docs/hooks/fixtures): an accepted shape, never a rejected one, the right endpoint, token and `X-Lich-Plugin` header, plus the client rules (no lich environment → no report; exit 0 when lich answers 500 or refuses the connection). The opencode and omp modules and the Claude Code mod are imported instead of spawned and fed the events a real run of each emits, against the same fixtures. All of them share `tests/contract.mjs`. The fixtures are vendored in `tests/fixtures/` by `tests/refresh-fixtures.sh`, at the lich release named in `tests/lich-ref`; CI diffs them against that release so a contract that moves in lich goes red here.
+Every hook script runs as a real subprocess, from the command line its registration spells, against a stub HTTP server — and the body it POSTs is asserted against [lich's contract fixtures](https://github.com/lichdotdev/lich/tree/main/docs/hooks/fixtures): an accepted shape, never a rejected one, the right endpoint, token and `X-Lich-Plugin` header, plus the client rules (no lich environment → no report; exit 0 when lich answers 500 or refuses the connection). The opencode and omp modules are imported instead of spawned and fed the events a real run of each emits, against the same fixtures. All of them share `tests/contract.mjs`. The fixtures are vendored in `tests/fixtures/` by `tests/refresh-fixtures.sh`, at the lich release named in `tests/lich-ref`; CI diffs them against that release so a contract that moves in lich goes red here.
